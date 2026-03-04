@@ -408,30 +408,7 @@
       min-height: 20px;
     }
 
-    /* ── Donate section ─────────────────────────────────────────── */
-    .donate-section {
-      margin-top: 24px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      padding: 32px 48px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 24px;
-      flex-wrap: wrap;
-    }
-    .donate-text h3 {
-      font-family: var(--font-head);
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-    .donate-text p {
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    /* ── Footer ─────────────────────────────────────────────────── */
+/* ── Footer ─────────────────────────────────────────────────── */
     footer {
       margin-top: 80px;
       padding-top: 32px;
@@ -649,26 +626,12 @@
 
         <!-- Actions -->
         <div class="action-row">
-          <button class="btn btn-primary" id="mintBtn" onclick="mintSBT()">
-            Mint Soulbound Badge
-          </button>
+          <button class="btn btn-primary" onclick="shareScore()">Share Score</button>
+          <button class="btn" onclick="copyBadge()">Copy Badge</button>
           <button class="btn" onclick="fetchScore()">Rescore</button>
-          <button class="btn" onclick="shareScore()">Share Score</button>
         </div>
       </div>
 
-      <!-- Donate section -->
-      <div class="donate-section">
-        <div class="donate-text">
-          <h3>Support WalletRep</h3>
-          <p>Help keep the project free and open for everyone.</p>
-        </div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn" onclick="donate('0.001')">0.001 ETH</button>
-          <button class="btn" onclick="donate('0.01')">0.01 ETH</button>
-          <button class="btn" onclick="donate('0.05')">0.05 ETH</button>
-        </div>
-      </div>
 
     </div>
 
@@ -701,20 +664,9 @@
 // This vanilla JS version works for prototyping and demo purposes.
 // ─────────────────────────────────────────────────────────────────────
 
-// ── Config (replace with your deployed values) ─────────────────────
+// ── Config ─────────────────────────────────────────────────────────
 const CONFIG = {
-  backendUrl:      "http://localhost:3001",   // your scoring backend
-  contractAddress: "0x...",                   // deployed WalletRep.sol
-  donationWallet:  "0x...",                   // your donation wallet
-  baseChainId:     84532,                     // 84532=Base Sepolia, 8453=Base Mainnet
-
-  // Minimal ABI for frontend interactions
-  contractABI: [
-    "function mintOrUpdateScore(uint8 score, uint8 tier, string calldata tierName, bytes calldata signature) external",
-    "function walletToken(address) view returns (uint256)",
-    "function nonces(address) view returns (uint256)",
-    "function donate() external payable",
-  ]
+  backendUrl: "http://localhost:3001",   // replace with your deployed backend URL
 };
 
 // ── App state ──────────────────────────────────────────────────────
@@ -868,86 +820,23 @@ function renderScore(data) {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// MINT SBT
-// ─────────────────────────────────────────────────────────────────────
-async function mintSBT() {
-  if (!state.scoreData) return;
-  if (!window.ethereum) { showToast("No wallet found.", "error"); return; }
-
-  const btn = document.getElementById("mintBtn");
-  btn.disabled = true;
-  btn.textContent = "Minting...";
-
-  try {
-    // Switch to Base (or Base Sepolia for testnet)
-    await switchToBase();
-
-    const { score, tier, tierName, signature } = state.scoreData;
-
-    // Build the transaction manually (without ethers.js for simplicity)
-    // In production, use ethers.js Contract or wagmi writeContract
-    const iface = buildMintCalldata(score, tier, tierName, signature);
-
-    const txHash = await window.ethereum.request({
-      method: "eth_sendTransaction",
-      params: [{
-        from:  state.wallet,
-        to:    CONFIG.contractAddress,
-        data:  iface,
-        value: "0x0",
-      }]
-    });
-
-    showToast(`Minted! TX: ${txHash.slice(0, 10)}...`, "success");
-    btn.textContent = "✓ Badge Minted";
-
-  } catch (err) {
-    showToast(err.message || "Mint failed.", "error");
-    btn.disabled = false;
-    btn.textContent = "Mint Soulbound Badge";
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────
-// DONATE
-// ─────────────────────────────────────────────────────────────────────
-async function donate(amountEth) {
-  if (!window.ethereum) { showToast("Connect wallet first.", "error"); return; }
-
-  try {
-    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-    const from      = accounts[0];
-    const valueHex  = "0x" + (parseFloat(amountEth) * 1e18).toString(16);
-
-    const txHash = await window.ethereum.request({
-      method: "eth_sendTransaction",
-      params: [{
-        from,
-        to:    CONFIG.donationWallet,
-        value: valueHex,
-      }]
-    });
-
-    showToast(`Donation sent! ❤️  ${amountEth} ETH`, "success");
-  } catch (err) {
-    showToast("Donation cancelled.", "error");
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────
-// SHARE SCORE
+// SHARE SCORE — opens the live shareable score page in a new tab
 // ─────────────────────────────────────────────────────────────────────
 function shareScore() {
-  if (!state.scoreData) return;
-  const { score, tierName } = state.scoreData;
-  const text = `My WalletRep score is ${score}/100 — ${tierName} tier 🔥\nCheck yours at walletrep.xyz #WalletRep $WREP`;
+  if (!state.wallet) return;
+  const url = `${CONFIG.backendUrl}/score/${state.wallet}`;
+  window.open(url, "_blank");
+  showToast("Score page opened!", "success");
+}
 
-  if (navigator.share) {
-    navigator.share({ text });
-  } else {
-    navigator.clipboard.writeText(text);
-    showToast("Score copied to clipboard!", "success");
-  }
+// ─────────────────────────────────────────────────────────────────────
+// COPY BADGE — copies the <img> embed snippet to clipboard
+// ─────────────────────────────────────────────────────────────────────
+function copyBadge() {
+  if (!state.wallet) return;
+  const snippet = `<img src="${CONFIG.backendUrl}/badge/${state.wallet}" alt="WalletRep Score" />`;
+  navigator.clipboard.writeText(snippet);
+  showToast("Badge embed code copied!", "success");
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -989,40 +878,6 @@ function animateLoadingChain() {
   }, 2500);
 }
 
-async function switchToBase() {
-  const chainHex = "0x" + CONFIG.baseChainId.toString(16);
-  try {
-    await window.ethereum.request({
-      method: "wallet_switchEthereumChain",
-      params: [{ chainId: chainHex }],
-    });
-  } catch (err) {
-    if (err.code === 4902) {
-      // Chain not added yet, add it
-      await window.ethereum.request({
-        method: "wallet_addEthereumChain",
-        params: [{
-          chainId:         chainHex,
-          chainName:       "Base Sepolia",
-          nativeCurrency:  { name: "ETH", symbol: "ETH", decimals: 18 },
-          rpcUrls:         ["https://sepolia.base.org"],
-          blockExplorerUrls: ["https://sepolia.basescan.org"],
-        }]
-      });
-    }
-  }
-}
-
-// Minimal ABI encoding for mintOrUpdateScore
-// In production use ethers.js Interface.encodeFunctionData()
-function buildMintCalldata(score, tier, tierName, signature) {
-  // This is a placeholder — replace with ethers.js in production
-  // ethers.js example:
-  //   const iface = new ethers.Interface(CONFIG.contractABI);
-  //   return iface.encodeFunctionData("mintOrUpdateScore", [score, tier, tierName, signature]);
-  console.warn("buildMintCalldata: replace with ethers.js in production");
-  return "0x"; // placeholder
-}
 </script>
 </body>
 </html>

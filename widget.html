@@ -421,11 +421,9 @@
 
         <!-- Actions -->
         <div class="wr-action-row">
-          <button class="wr-btn wr-btn-primary" id="wr-mintBtn" onclick="wrMintSBT()">
-            Mint Soulbound Badge
-          </button>
+          <button class="wr-btn wr-btn-primary" onclick="wrShareScore()">Share Score</button>
+          <button class="wr-btn" onclick="wrCopyBadge()">Copy Badge</button>
           <button class="wr-btn" onclick="wrFetchScore()">Rescore</button>
-          <button class="wr-btn" onclick="wrShareScore()">Share Score</button>
         </div>
 
       </div>
@@ -451,15 +449,7 @@
   const _ext = window.WALLETREP_CONFIG || {};
 
   const WR_CONFIG = {
-    backendUrl:      _ext.backendUrl      || _qp.get("backend")  || "http://localhost:3001",
-    contractAddress: _ext.contractAddress || _qp.get("contract") || "0x0000000000000000000000000000000000000000",
-    donationWallet:  _ext.donationWallet  || "0x0000000000000000000000000000000000000000",
-    baseChainId:     _ext.baseChainId     || parseInt(_qp.get("chainId") || "84532"),
-    contractABI: [
-      "function mintOrUpdateScore(uint8 score, uint8 tier, string calldata tierName, bytes calldata signature) external",
-      "function walletToken(address) view returns (uint256)",
-      "function nonces(address) view returns (uint256)",
-    ],
+    backendUrl: _ext.backendUrl || _qp.get("backend") || "http://localhost:3001",
   };
 
   const WR_CATEGORIES = [
@@ -525,33 +515,6 @@
     }, 2500);
   }
 
-  async function wrSwitchToBase() {
-    const chainHex = "0x" + WR_CONFIG.baseChainId.toString(16);
-    try {
-      await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: chainHex }] });
-    } catch (err) {
-      if (err.code === 4902) {
-        await window.ethereum.request({
-          method: "wallet_addEthereumChain",
-          params: [{
-            chainId: chainHex,
-            chainName: "Base Sepolia",
-            nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
-            rpcUrls: ["https://sepolia.base.org"],
-            blockExplorerUrls: ["https://sepolia.basescan.org"],
-          }]
-        });
-      }
-    }
-  }
-
-  function wrBuildMintCalldata(score, tier, tierName, signature) {
-    // Replace with ethers.js in production:
-    //   const iface = new ethers.Interface(WR_CONFIG.contractABI);
-    //   return iface.encodeFunctionData("mintOrUpdateScore", [score, tier, tierName, signature]);
-    console.warn("WalletRep: replace wrBuildMintCalldata with ethers.js before going live");
-    return "0x";
-  }
 
   // ── Connect wallet ───────────────────────────────────────────────
   window.wrConnectWallet = async function () {
@@ -634,46 +597,19 @@
     }
   }
 
-  // ── Mint SBT ─────────────────────────────────────────────────────
-  window.wrMintSBT = async function () {
-    if (!wrState.scoreData) return;
-    if (!window.ethereum) { wrShowToast("No wallet found.", "error"); return; }
-
-    const btn = wrGet("wr-mintBtn");
-    btn.disabled    = true;
-    btn.textContent = "Minting...";
-
-    try {
-      await wrSwitchToBase();
-      const { score, tier, tierName, signature } = wrState.scoreData;
-      const calldata = wrBuildMintCalldata(score, tier, tierName, signature);
-
-      const txHash = await window.ethereum.request({
-        method: "eth_sendTransaction",
-        params: [{ from: wrState.wallet, to: WR_CONFIG.contractAddress, data: calldata, value: "0x0" }],
-      });
-
-      wrShowToast(`Minted! TX: ${txHash.slice(0, 10)}...`, "success");
-      btn.textContent = "✓ Badge Minted";
-    } catch (err) {
-      wrShowToast(err.message || "Mint failed.", "error");
-      btn.disabled    = false;
-      btn.textContent = "Mint Soulbound Badge";
-    }
+  // ── Share score — opens the live shareable page ──────────────────
+  window.wrShareScore = function () {
+    if (!wrState.wallet) return;
+    window.open(`${WR_CONFIG.backendUrl}/score/${wrState.wallet}`, "_blank");
+    wrShowToast("Score page opened!", "success");
   };
 
-  // ── Share score ──────────────────────────────────────────────────
-  window.wrShareScore = function () {
-    if (!wrState.scoreData) return;
-    const { score, tierName } = wrState.scoreData;
-    const text = `My WalletRep score is ${score}/100 — ${tierName} tier 🔥\nCheck yours at walletrep.xyz #WalletRep $WREP`;
-
-    if (navigator.share) {
-      navigator.share({ text });
-    } else {
-      navigator.clipboard.writeText(text);
-      wrShowToast("Score copied to clipboard!", "success");
-    }
+  // ── Copy badge — copies <img> embed snippet ───────────────────────
+  window.wrCopyBadge = function () {
+    if (!wrState.wallet) return;
+    const snippet = `<img src="${WR_CONFIG.backendUrl}/badge/${wrState.wallet}" alt="WalletRep Score" />`;
+    navigator.clipboard.writeText(snippet);
+    wrShowToast("Badge embed code copied!", "success");
   };
 
 })(); // end IIFE — no globals leaked
