@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WalletRep Score</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    /*
+    ═══════════════════════════════════════════════════════════════════
+    WalletRep Widget — widget.html
+    ═══════════════════════════════════════════════════════════════════
+
+    OPTION 1 — iframe embed (recommended — zero CSS conflicts):
+
+      <iframe
+        src="https://your-walletrep-url.com/widget.html?backend=https://your-api.com"
+        style="width:100%;height:680px;border:none;"
+        allow="ethereum"
+      ></iframe>
+
+    OPTION 2 — inline embed (drop into any existing page):
+
+      Step 1. Add fonts to your <head> (skip if already using Syne/DM Mono):
+        <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+
+      Step 2. Set config before the widget div:
+        <script>
+          window.WALLETREP_CONFIG = {
+            backendUrl:      "https://your-api.com",
+            contractAddress: "0x...",
+            donationWallet:  "0x...",
+            baseChainId:     8453,
+          };
+        </script>
+
+      Step 3. Paste the .walletrep-widget div + <script> tags from this file into your page.
+
+    CONFIG priority: window.WALLETREP_CONFIG > ?backend= query param > localhost default
+    ═══════════════════════════════════════════════════════════════════
+    */
+
+    /* ── CSS custom properties — prefixed to avoid host page conflicts ── */
+    .walletrep-widget {
+      --wr-bg:        #0a0a0f;
+      --wr-surface:   #111118;
+      --wr-border:    #1e1e2e;
+      --wr-text:      #e8e8f0;
+      --wr-muted:     #5a5a72;
+      --wr-accent:    #7fff6a;
+      --wr-accent2:   #ff6a3d;
+      --wr-accent3:   #6a8fff;
+      --wr-tier1:     #5a5a72;
+      --wr-tier2:     #6a8fff;
+      --wr-tier3:     #f0c050;
+      --wr-tier4:     #ff6a3d;
+      --wr-tier5:     #7fff6a;
+      --wr-font-head: 'Syne', sans-serif;
+      --wr-font-mono: 'DM Mono', monospace;
+    }
+
+    /* ── Widget root — scoped, won't affect host page ───────────── */
+    .walletrep-widget {
+      background: var(--wr-bg);
+      color: var(--wr-text);
+      font-family: var(--wr-font-mono);
+      position: relative;
+      padding: 32px 24px;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+
+    /* Background noise + grid scoped inside widget */
+    .walletrep-widget::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0; opacity: 0.4;
+    }
+    .walletrep-widget::after {
+      content: '';
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(var(--wr-border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--wr-border) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none; z-index: 0; opacity: 0.3;
+    }
+
+    /* box-sizing reset scoped to widget only */
+    .walletrep-widget *, .walletrep-widget *::before, .walletrep-widget *::after {
+      box-sizing: border-box;
+    }
+
+    .wr-inner {
+      position: relative; z-index: 1;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    /* ── Top bar ─────────────────────────────────────────────────── */
+    .wr-topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+    }
+
+    .wr-logo {
+      font-family: var(--wr-font-head);
+      font-weight: 800;
+      font-size: 18px;
+      letter-spacing: -0.5px;
+    }
+    .wr-logo span { color: var(--wr-accent); }
+
+    /* ── Buttons ─────────────────────────────────────────────────── */
+    .wr-btn {
+      font-family: var(--wr-font-mono);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      border: 1px solid var(--wr-border);
+      background: var(--wr-surface);
+      color: var(--wr-text);
+      padding: 10px 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .wr-btn:hover { border-color: var(--wr-accent); color: var(--wr-accent); }
+    .wr-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .wr-btn-primary {
+      border-color: var(--wr-accent);
+      color: var(--wr-accent);
+      font-size: 13px;
+      padding: 14px 32px;
+    }
+    .wr-btn-primary:hover { background: var(--wr-accent); color: var(--wr-bg); }
+
+    /* ── Chain badges ────────────────────────────────────────────── */
+    .wr-chains {
+      display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 32px;
+    }
+    .wr-chain-badge {
+      font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--wr-muted); border: 1px solid var(--wr-border); padding: 4px 10px;
+    }
+    .wr-chain-badge.active { color: var(--wr-accent3); border-color: var(--wr-accent3); }
+
+    /* ── Panels ──────────────────────────────────────────────────── */
+    .wr-panel {
+      background: var(--wr-surface);
+      border: 1px solid var(--wr-border);
+      padding: 48px; text-align: center;
+    }
+    .wr-panel-icon { font-size: 48px; margin-bottom: 24px; display: block; }
+    .wr-panel h2 {
+      font-family: var(--wr-font-head); font-size: 24px;
+      font-weight: 700; margin-bottom: 12px;
+    }
+    .wr-panel p {
+      font-size: 13px; color: var(--wr-muted);
+      line-height: 1.7; margin-bottom: 32px;
+    }
+
+    /* ── Loading ─────────────────────────────────────────────────── */
+    .wr-loading-dots { display: flex; justify-content: center; gap: 8px; margin: 32px 0; }
+    .wr-dot { width: 6px; height: 6px; background: var(--wr-accent); animation: wr-blink 1.4s infinite; }
+    .wr-dot:nth-child(2) { animation-delay: 0.2s; }
+    .wr-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes wr-blink {
+      0%, 80%, 100% { opacity: 0.2; }
+      40%           { opacity: 1; }
+    }
+    .wr-loading-status { font-size: 11px; color: var(--wr-muted); letter-spacing: 2px; text-transform: uppercase; }
+    .wr-loading-chain  { font-size: 11px; color: var(--wr-accent); letter-spacing: 1px; margin-top: 8px; min-height: 20px; }
+
+    /* ── Score card ──────────────────────────────────────────────── */
+    .wr-score-card {
+      background: var(--wr-surface); border: 1px solid var(--wr-border);
+      padding: 40px; position: relative; overflow: hidden;
+    }
+    .wr-score-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--wr-tier-color, var(--wr-accent)), transparent);
+    }
+
+    .wr-score-header {
+      display: flex; justify-content: space-between;
+      align-items: flex-start; margin-bottom: 32px;
+    }
+
+    .wr-score-number {
+      font-family: var(--wr-font-head); font-size: 80px;
+      font-weight: 800; line-height: 1;
+      color: var(--wr-tier-color, var(--wr-accent)); letter-spacing: -3px;
+    }
+    .wr-score-max { font-size: 20px; color: var(--wr-muted); letter-spacing: 0; }
+
+    .wr-tier-badge { text-align: right; }
+    .wr-tier-name {
+      font-family: var(--wr-font-head); font-size: 24px;
+      font-weight: 800; color: var(--wr-tier-color, var(--wr-accent));
+    }
+    .wr-tier-num {
+      font-size: 11px; letter-spacing: 2px; color: var(--wr-muted);
+      text-transform: uppercase; margin-top: 4px;
+    }
+
+    /* ── Score bar ───────────────────────────────────────────────── */
+    .wr-score-bar-wrap { margin-bottom: 28px; }
+    .wr-score-bar-labels {
+      display: flex; justify-content: space-between;
+      font-size: 9px; letter-spacing: 1px; color: var(--wr-muted);
+      text-transform: uppercase; margin-bottom: 8px;
+    }
+    .wr-score-bar-track { height: 4px; background: var(--wr-border); position: relative; }
+    .wr-score-bar-fill {
+      height: 100%; background: var(--wr-tier-color, var(--wr-accent));
+      transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1); position: relative;
+    }
+    .wr-score-bar-fill::after {
+      content: ''; position: absolute; right: 0; top: -4px;
+      width: 2px; height: 12px; background: var(--wr-tier-color, var(--wr-accent));
+    }
+    .wr-tier-markers { display: flex; margin-top: 12px; gap: 2px; }
+    .wr-tier-marker { flex: 1; height: 2px; opacity: 0.3; }
+    .wr-tier-marker.t1 { background: var(--wr-tier1); flex: 0.2; }
+    .wr-tier-marker.t2 { background: var(--wr-tier2); flex: 0.35; }
+    .wr-tier-marker.t3 { background: var(--wr-tier3); flex: 0.2; }
+    .wr-tier-marker.t4 { background: var(--wr-tier4); flex: 0.15; }
+    .wr-tier-marker.t5 { background: var(--wr-tier5); flex: 0.1; }
+
+    /* ── Breakdown grid ──────────────────────────────────────────── */
+    .wr-breakdown-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 1px; background: var(--wr-border);
+      border: 1px solid var(--wr-border); margin-top: 28px;
+    }
+    .wr-breakdown-cell { background: var(--wr-surface); padding: 16px; }
+    .wr-breakdown-label {
+      font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--wr-muted); margin-bottom: 6px;
+    }
+    .wr-breakdown-score {
+      font-family: var(--wr-font-head); font-size: 24px;
+      font-weight: 700; color: var(--wr-text);
+    }
+    .wr-breakdown-max { font-size: 11px; color: var(--wr-muted); }
+    .wr-breakdown-bar { height: 2px; background: var(--wr-border); margin-top: 8px; }
+    .wr-breakdown-bar-fill { height: 100%; background: var(--wr-accent3); transition: width 1s ease; }
+
+    /* ── Chain activity ──────────────────────────────────────────── */
+    .wr-chain-activity { margin-top: 28px; }
+    .wr-chain-activity-label {
+      font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--wr-muted); margin-bottom: 10px;
+    }
+    .wr-chain-list { display: flex; gap: 8px; flex-wrap: wrap; }
+    .wr-chain-pill {
+      font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+      padding: 4px 12px; border: 1px solid var(--wr-accent3); color: var(--wr-accent3);
+    }
+
+    /* ── Action row ──────────────────────────────────────────────── */
+    .wr-action-row { display: flex; gap: 12px; margin-top: 28px; flex-wrap: wrap; }
+
+    /* ── Wallet display ──────────────────────────────────────────── */
+    .wr-wallet-display {
+      font-size: 11px; color: var(--wr-muted);
+      letter-spacing: 1px; margin-bottom: 24px;
+    }
+    .wr-wallet-display span { color: var(--wr-accent); font-family: var(--wr-font-mono); }
+
+    /* ── Toast ───────────────────────────────────────────────────── */
+    .wr-toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--wr-surface); border: 1px solid var(--wr-border);
+      padding: 14px 20px; font-size: 12px; letter-spacing: 0.5px;
+      z-index: 9999; transform: translateY(80px); opacity: 0; transition: all 0.3s;
+      font-family: var(--wr-font-mono);
+    }
+    .wr-toast.show  { transform: translateY(0); opacity: 1; }
+    .wr-toast.success { border-color: var(--wr-accent); color: var(--wr-accent); }
+    .wr-toast.error   { border-color: var(--wr-accent2); color: var(--wr-accent2); }
+
+    /* ── Tier colors ─────────────────────────────────────────────── */
+    [data-wr-tier="1"] { --wr-tier-color: var(--wr-tier1); }
+    [data-wr-tier="2"] { --wr-tier-color: var(--wr-tier2); }
+    [data-wr-tier="3"] { --wr-tier-color: var(--wr-tier3); }
+    [data-wr-tier="4"] { --wr-tier-color: var(--wr-tier4); }
+    [data-wr-tier="5"] { --wr-tier-color: var(--wr-tier5); }
+
+    /* ── Fade in ─────────────────────────────────────────────────── */
+    .wr-fade-in { animation: wr-fadeIn 0.6s ease forwards; }
+    @keyframes wr-fadeIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Responsive ──────────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .wr-score-header   { flex-direction: column; gap: 16px; }
+      .wr-tier-badge     { text-align: left; }
+      .wr-breakdown-grid { grid-template-columns: repeat(2, 1fr); }
+      .wr-score-number   { font-size: 56px; }
+    }
+
+    /* ── iframe / standalone body reset ─────────────────────────── */
+    body { margin: 0; padding: 0; background: transparent; }
+  </style>
+</head>
+<body>
+
+<div class="walletrep-widget">
+  <div class="wr-inner">
+
+    <!-- Top bar -->
+    <div class="wr-topbar">
+      <div class="wr-logo">Wallet<span>Rep</span></div>
+      <div id="wr-walletArea">
+        <button class="wr-btn wr-btn-primary" onclick="wrConnectWallet()">Connect Wallet</button>
+      </div>
+    </div>
+
+    <!-- Chain badges -->
+    <div class="wr-chains">
+      <span class="wr-chain-badge active">Ethereum</span>
+      <span class="wr-chain-badge active">Base</span>
+      <span class="wr-chain-badge active">Arbitrum</span>
+      <span class="wr-chain-badge active">Optimism</span>
+      <span class="wr-chain-badge active">Avalanche</span>
+    </div>
+
+    <!-- STEP 1: Connect prompt -->
+    <div id="wr-heroPanel">
+      <div class="wr-panel">
+        <span class="wr-panel-icon">⬡</span>
+        <h2>Connect your wallet to begin</h2>
+        <p>We'll analyze your last 3 years of onchain activity.<br/>Nothing is stored. Everything is computed live.</p>
+        <button class="wr-btn wr-btn-primary" onclick="wrConnectWallet()">Connect Wallet</button>
+      </div>
+    </div>
+
+    <!-- STEP 2: Connected, ready to score -->
+    <div id="wr-connectedPanel" style="display:none;">
+      <div class="wr-wallet-display">
+        Analyzing wallet <span id="wr-walletShort">—</span>
+      </div>
+      <div class="wr-panel">
+        <span class="wr-panel-icon">🔍</span>
+        <h2>Ready to score</h2>
+        <p>Click below to scan your onchain history across all 5 chains.<br/>This takes 10–20 seconds.</p>
+        <button class="wr-btn wr-btn-primary" onclick="wrFetchScore()">Run WalletRep Score</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: Loading -->
+    <div id="wr-loadingPanel" style="display:none;">
+      <div class="wr-panel">
+        <div class="wr-loading-dots">
+          <div class="wr-dot"></div>
+          <div class="wr-dot"></div>
+          <div class="wr-dot"></div>
+        </div>
+        <div class="wr-loading-status">Scanning onchain activity</div>
+        <div class="wr-loading-chain" id="wr-loadingChain">Connecting to Ethereum...</div>
+      </div>
+    </div>
+
+    <!-- STEP 4: Result -->
+    <div id="wr-resultPanel" style="display:none;" class="wr-fade-in">
+      <div class="wr-score-card" id="wr-scoreCard">
+
+        <div class="wr-score-header">
+          <div>
+            <div class="wr-score-number">
+              <span id="wr-scoreNum">—</span><span class="wr-score-max">/100</span>
+            </div>
+          </div>
+          <div class="wr-tier-badge">
+            <div class="wr-tier-name" id="wr-tierName">—</div>
+            <div class="wr-tier-num"  id="wr-tierNum">—</div>
+          </div>
+        </div>
+
+        <!-- Score bar -->
+        <div class="wr-score-bar-wrap">
+          <div class="wr-score-bar-labels">
+            <span>Newbie</span>
+            <span>Intern</span>
+            <span>Activus</span>
+            <span>Vet</span>
+            <span>Degen</span>
+          </div>
+          <div class="wr-score-bar-track">
+            <div class="wr-score-bar-fill" id="wr-scoreBar" style="width:0%"></div>
+          </div>
+          <div class="wr-tier-markers">
+            <div class="wr-tier-marker t1"></div>
+            <div class="wr-tier-marker t2"></div>
+            <div class="wr-tier-marker t3"></div>
+            <div class="wr-tier-marker t4"></div>
+            <div class="wr-tier-marker t5"></div>
+          </div>
+        </div>
+
+        <!-- Category breakdown -->
+        <div class="wr-breakdown-grid" id="wr-breakdownGrid"></div>
+
+        <!-- Active chains -->
+        <div class="wr-chain-activity" id="wr-chainActivity" style="display:none;">
+          <div class="wr-chain-activity-label">Active on</div>
+          <div class="wr-chain-list" id="wr-chainList"></div>
+        </div>
+
+        <!-- Actions -->
+        <div class="wr-action-row">
+          <button class="wr-btn wr-btn-primary" id="wr-mintBtn" onclick="wrMintSBT()">
+            Mint Soulbound Badge
+          </button>
+          <button class="wr-btn" onclick="wrFetchScore()">Rescore</button>
+          <button class="wr-btn" onclick="wrShareScore()">Share Score</button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast (fixed position — works in both iframe and inline mode) -->
+<div class="wr-toast" id="wr-toast"></div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────
+// WalletRep Widget Script
+// All functions and state wrapped in an IIFE to avoid polluting
+// the host page's global scope.
+// ─────────────────────────────────────────────────────────────────────
+(function () {
+
+  // ── Config resolution ────────────────────────────────────────────
+  // Priority: window.WALLETREP_CONFIG > ?backend= query param > localhost
+  const _qp  = new URLSearchParams(window.location.search);
+  const _ext = window.WALLETREP_CONFIG || {};
+
+  const WR_CONFIG = {
+    backendUrl:      _ext.backendUrl      || _qp.get("backend")  || "http://localhost:3001",
+    contractAddress: _ext.contractAddress || _qp.get("contract") || "0x0000000000000000000000000000000000000000",
+    donationWallet:  _ext.donationWallet  || "0x0000000000000000000000000000000000000000",
+    baseChainId:     _ext.baseChainId     || parseInt(_qp.get("chainId") || "84532"),
+    contractABI: [
+      "function mintOrUpdateScore(uint8 score, uint8 tier, string calldata tierName, bytes calldata signature) external",
+      "function walletToken(address) view returns (uint256)",
+      "function nonces(address) view returns (uint256)",
+    ],
+  };
+
+  const WR_CATEGORIES = [
+    { key: "walletAge",    label: "Wallet Age",    max: 20 },
+    { key: "txVolume",     label: "TX Volume",     max: 15 },
+    { key: "txFrequency",  label: "TX Frequency",  max: 15 },
+    { key: "defiActivity", label: "DeFi Activity", max: 25 },
+    { key: "nftActivity",  label: "NFT Activity",  max: 10 },
+    { key: "multichain",   label: "Multi-chain",   max: 15 },
+  ];
+
+  const WR_TIER_LABELS = {
+    1: "Tier 1 — Newbie",
+    2: "Tier 2 — Intern",
+    3: "Tier 3 — Activus",
+    4: "Tier 4 — Vet",
+    5: "Tier 5 — Degen",
+  };
+
+  const WR_LOADING_STEPS = [
+    "Connecting to Ethereum...",
+    "Scanning Base activity...",
+    "Checking Arbitrum history...",
+    "Fetching Optimism data...",
+    "Analyzing Avalanche...",
+    "Computing your score...",
+  ];
+
+  let wrState = { wallet: null, scoreData: null };
+
+  // ── Helpers ──────────────────────────────────────────────────────
+  function wrGet(id)   { return document.getElementById(id); }
+  function wrShowPanel(id) {
+    ["wr-heroPanel", "wr-connectedPanel", "wr-loadingPanel", "wr-resultPanel"]
+      .forEach(p => { wrGet(p).style.display = p === id ? "block" : "none"; });
+  }
+
+  function wrShowToast(msg, type = "success") {
+    const t = wrGet("wr-toast");
+    t.textContent = msg;
+    t.className   = `wr-toast ${type} show`;
+    setTimeout(() => { t.className = `wr-toast ${type}`; }, 3500);
+  }
+
+  function wrAnimateCount(id, from, to, duration) {
+    const el = wrGet(id);
+    const start = performance.now();
+    function step(now) {
+      const t    = Math.min((now - start) / duration, 1);
+      const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
+      el.textContent = Math.round(from + (to - from) * ease);
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  function wrAnimateLoadingChain() {
+    let i = 0;
+    const el = wrGet("wr-loadingChain");
+    const iv = setInterval(() => {
+      if (i >= WR_LOADING_STEPS.length) { clearInterval(iv); return; }
+      if (el) el.textContent = WR_LOADING_STEPS[i++];
+    }, 2500);
+  }
+
+  async function wrSwitchToBase() {
+    const chainHex = "0x" + WR_CONFIG.baseChainId.toString(16);
+    try {
+      await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: chainHex }] });
+    } catch (err) {
+      if (err.code === 4902) {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: chainHex,
+            chainName: "Base Sepolia",
+            nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+            rpcUrls: ["https://sepolia.base.org"],
+            blockExplorerUrls: ["https://sepolia.basescan.org"],
+          }]
+        });
+      }
+    }
+  }
+
+  function wrBuildMintCalldata(score, tier, tierName, signature) {
+    // Replace with ethers.js in production:
+    //   const iface = new ethers.Interface(WR_CONFIG.contractABI);
+    //   return iface.encodeFunctionData("mintOrUpdateScore", [score, tier, tierName, signature]);
+    console.warn("WalletRep: replace wrBuildMintCalldata with ethers.js before going live");
+    return "0x";
+  }
+
+  // ── Connect wallet ───────────────────────────────────────────────
+  window.wrConnectWallet = async function () {
+    if (!window.ethereum) {
+      wrShowToast("No wallet detected. Install MetaMask or Rabby.", "error");
+      return;
+    }
+    try {
+      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+      wrState.wallet  = accounts[0];
+      const short     = wrState.wallet.slice(0, 6) + "..." + wrState.wallet.slice(-4);
+
+      wrGet("wr-walletShort").textContent = short;
+      wrGet("wr-walletArea").innerHTML =
+        `<button class="wr-btn" style="border-color:var(--wr-accent);color:var(--wr-accent);">${short}</button>`;
+
+      wrShowPanel("wr-connectedPanel");
+      wrShowToast("Wallet connected ✓", "success");
+    } catch {
+      wrShowToast("Connection cancelled.", "error");
+    }
+  };
+
+  // ── Fetch score ──────────────────────────────────────────────────
+  window.wrFetchScore = async function () {
+    if (!wrState.wallet) { wrShowToast("Connect wallet first.", "error"); return; }
+
+    wrShowPanel("wr-loadingPanel");
+    wrAnimateLoadingChain();
+
+    try {
+      const res = await fetch(`${WR_CONFIG.backendUrl}/api/score`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ wallet: wrState.wallet }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Scoring failed");
+      }
+
+      wrState.scoreData = await res.json();
+      wrRenderScore(wrState.scoreData);
+      wrShowPanel("wr-resultPanel");
+    } catch (err) {
+      wrShowPanel("wr-connectedPanel");
+      wrShowToast(err.message || "Failed to fetch score.", "error");
+    }
+  };
+
+  // ── Render score ─────────────────────────────────────────────────
+  function wrRenderScore(data) {
+    const { score, tier, tierName, breakdown } = data;
+
+    wrGet("wr-scoreCard").setAttribute("data-wr-tier", tier);
+    wrAnimateCount("wr-scoreNum", 0, score, 1200);
+    setTimeout(() => { wrGet("wr-scoreBar").style.width = score + "%"; }, 100);
+
+    wrGet("wr-tierName").textContent = tierName;
+    wrGet("wr-tierNum").textContent  = WR_TIER_LABELS[tier] || "";
+
+    wrGet("wr-breakdownGrid").innerHTML = WR_CATEGORIES.map(cat => {
+      const pts = breakdown[cat.key] || 0;
+      const pct = Math.round((pts / cat.max) * 100);
+      return `
+        <div class="wr-breakdown-cell">
+          <div class="wr-breakdown-label">${cat.label}</div>
+          <div class="wr-breakdown-score">${pts}<span class="wr-breakdown-max">/${cat.max}</span></div>
+          <div class="wr-breakdown-bar">
+            <div class="wr-breakdown-bar-fill" style="width:${pct}%"></div>
+          </div>
+        </div>`;
+    }).join("");
+
+    if (data.activeChainNames && data.activeChainNames.length > 0) {
+      wrGet("wr-chainActivity").style.display = "block";
+      wrGet("wr-chainList").innerHTML =
+        data.activeChainNames.map(c => `<span class="wr-chain-pill">${c}</span>`).join("");
+    }
+  }
+
+  // ── Mint SBT ─────────────────────────────────────────────────────
+  window.wrMintSBT = async function () {
+    if (!wrState.scoreData) return;
+    if (!window.ethereum) { wrShowToast("No wallet found.", "error"); return; }
+
+    const btn = wrGet("wr-mintBtn");
+    btn.disabled    = true;
+    btn.textContent = "Minting...";
+
+    try {
+      await wrSwitchToBase();
+      const { score, tier, tierName, signature } = wrState.scoreData;
+      const calldata = wrBuildMintCalldata(score, tier, tierName, signature);
+
+      const txHash = await window.ethereum.request({
+        method: "eth_sendTransaction",
+        params: [{ from: wrState.wallet, to: WR_CONFIG.contractAddress, data: calldata, value: "0x0" }],
+      });
+
+      wrShowToast(`Minted! TX: ${txHash.slice(0, 10)}...`, "success");
+      btn.textContent = "✓ Badge Minted";
+    } catch (err) {
+      wrShowToast(err.message || "Mint failed.", "error");
+      btn.disabled    = false;
+      btn.textContent = "Mint Soulbound Badge";
+    }
+  };
+
+  // ── Share score ──────────────────────────────────────────────────
+  window.wrShareScore = function () {
+    if (!wrState.scoreData) return;
+    const { score, tierName } = wrState.scoreData;
+    const text = `My WalletRep score is ${score}/100 — ${tierName} tier 🔥\nCheck yours at walletrep.xyz #WalletRep $WREP`;
+
+    if (navigator.share) {
+      navigator.share({ text });
+    } else {
+      navigator.clipboard.writeText(text);
+      wrShowToast("Score copied to clipboard!", "success");
+    }
+  };
+
+})(); // end IIFE — no globals leaked
+</script>
+</body>
+</html>
