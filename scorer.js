@@ -16,11 +16,11 @@
 
 // ── Tier definitions ──────────────────────────────────────────────────────
 const TIERS = [
-  { min: 1,  max: 20,  tier: 1, name: "Newbie"              },
-  { min: 21, max: 55,  tier: 2, name: "Explorer"            },
-  { min: 56, max: 75,  tier: 3, name: "Degen-in-Training"   },
-  { min: 76, max: 90,  tier: 4, name: "Veteran"             },
-  { min: 91, max: 100, tier: 5, name: "DEGEN"               },
+  { min: 1,  max: 20,  tier: 1, name: "Newbie"  },
+  { min: 21, max: 55,  tier: 2, name: "Intern"  },
+  { min: 56, max: 75,  tier: 3, name: "Activus" },
+  { min: 76, max: 90,  tier: 4, name: "Vet"     },
+  { min: 91, max: 100, tier: 5, name: "Degen"   },
 ];
 
 // ── Scoring weights (must sum to 100) ────────────────────────────────────
