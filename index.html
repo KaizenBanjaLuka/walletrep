@@ -708,14 +708,26 @@ const LOADING_STEPS = [
 // ─────────────────────────────────────────────────────────────────────
 // WALLET CONNECTION
 // ─────────────────────────────────────────────────────────────────────
+function getProvider() {
+  if (!window.ethereum) return null;
+  // When multiple wallets are installed (e.g. MetaMask + Phantom), they stack
+  // under window.ethereum.providers. Pick MetaMask, fall back to first available.
+  if (window.ethereum.providers?.length) {
+    return window.ethereum.providers.find(p => p.isMetaMask) || window.ethereum.providers[0];
+  }
+  return window.ethereum;
+}
+
 async function connectWallet() {
-  if (!window.ethereum) {
+  const provider = getProvider();
+  if (!provider) {
     showToast("No wallet detected. Install MetaMask or Rabby.", "error");
     return;
   }
 
   try {
-    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    const accounts = await provider.request({ method: "eth_requestAccounts" });
+    state.provider = provider;
     state.wallet = accounts[0];
 
     // Show connected state
@@ -736,7 +748,8 @@ async function connectWallet() {
 
     showToast("Wallet connected ✓", "success");
   } catch (err) {
-    showToast("Connection cancelled.", "error");
+    showToast(err?.message || "Connection cancelled.", "error");
+    console.error("Wallet connection error:", err);
   }
 }
 

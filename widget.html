@@ -516,15 +516,25 @@
   }
 
 
+  function wrGetProvider() {
+    if (!window.ethereum) return null;
+    if (window.ethereum.providers?.length) {
+      return window.ethereum.providers.find(p => p.isMetaMask) || window.ethereum.providers[0];
+    }
+    return window.ethereum;
+  }
+
   // ── Connect wallet ───────────────────────────────────────────────
   window.wrConnectWallet = async function () {
-    if (!window.ethereum) {
+    const provider = wrGetProvider();
+    if (!provider) {
       wrShowToast("No wallet detected. Install MetaMask or Rabby.", "error");
       return;
     }
     try {
-      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-      wrState.wallet  = accounts[0];
+      const accounts = await provider.request({ method: "eth_requestAccounts" });
+      wrState.wallet    = accounts[0];
+      wrState.provider  = provider;
       const short     = wrState.wallet.slice(0, 6) + "..." + wrState.wallet.slice(-4);
 
       wrGet("wr-walletShort").textContent = short;
