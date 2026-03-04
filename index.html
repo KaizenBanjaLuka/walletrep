@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WalletRep — Know Your Onchain Rep</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Variables ──────────────────────────────────────────────── */
+    :root {
+      --bg:        #0a0a0f;
+      --surface:   #111118;
+      --border:    #1e1e2e;
+      --text:      #e8e8f0;
+      --muted:     #5a5a72;
+      --accent:    #7fff6a;
+      --accent2:   #ff6a3d;
+      --accent3:   #6a8fff;
+      --tier1:     #5a5a72;
+      --tier2:     #6a8fff;
+      --tier3:     #f0c050;
+      --tier4:     #ff6a3d;
+      --tier5:     #7fff6a;
+      --font-head: 'Syne', sans-serif;
+      --font-mono: 'DM Mono', monospace;
+    }
+
+    /* ── Reset ──────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Noise texture overlay ──────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0; opacity: 0.4;
+    }
+
+    /* ── Grid background ────────────────────────────────────────── */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none; z-index: 0; opacity: 0.3;
+    }
+
+    /* ── Layout ─────────────────────────────────────────────────── */
+    .app {
+      position: relative; z-index: 1;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 48px 24px 120px;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────── */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 80px;
+    }
+
+    .logo {
+      font-family: var(--font-head);
+      font-weight: 800;
+      font-size: 22px;
+      letter-spacing: -0.5px;
+    }
+    .logo span { color: var(--accent); }
+
+    .logo-sub {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    /* ── Wallet button ──────────────────────────────────────────── */
+    .btn {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      padding: 10px 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: var(--accent);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { border-color: var(--accent); color: var(--accent); }
+    .btn:hover::after { opacity: 0.05; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-primary {
+      border-color: var(--accent);
+      color: var(--accent);
+      font-size: 13px;
+      padding: 14px 32px;
+    }
+    .btn-primary:hover { background: var(--accent); color: var(--bg); }
+    .btn-primary:hover::after { opacity: 0; }
+
+    /* ── Hero ───────────────────────────────────────────────────── */
+    .hero { margin-bottom: 64px; }
+
+    .hero-tag {
+      display: inline-block;
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 4px 12px;
+      margin-bottom: 24px;
+      opacity: 0.8;
+    }
+
+    .hero h1 {
+      font-family: var(--font-head);
+      font-size: clamp(42px, 8vw, 80px);
+      font-weight: 800;
+      line-height: 0.95;
+      letter-spacing: -2px;
+      margin-bottom: 24px;
+    }
+
+    .hero h1 .line2 { color: var(--accent); }
+    .hero h1 .line3 { color: var(--muted); }
+
+    .hero-desc {
+      font-size: 13px;
+      color: var(--muted);
+      max-width: 480px;
+      line-height: 1.7;
+      letter-spacing: 0.3px;
+    }
+
+    /* ── Chain badges ───────────────────────────────────────────── */
+    .chain-badges {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 32px 0;
+    }
+    .chain-badge {
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .chain-badge.active { color: var(--accent3); border-color: var(--accent3); }
+
+    /* ── Score card ─────────────────────────────────────────────── */
+    .score-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 48px;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .score-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--tier-color, var(--accent)), transparent);
+    }
+
+    .score-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 40px;
+    }
+
+    .score-number {
+      font-family: var(--font-head);
+      font-size: 96px;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--tier-color, var(--accent));
+      letter-spacing: -4px;
+    }
+    .score-max { font-size: 24px; color: var(--muted); letter-spacing: 0; }
+
+    .tier-badge {
+      text-align: right;
+    }
+    .tier-name {
+      font-family: var(--font-head);
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--tier-color, var(--accent));
+      letter-spacing: -0.5px;
+    }
+    .tier-num {
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    /* ── Score bar ──────────────────────────────────────────────── */
+    .score-bar-wrap {
+      margin-bottom: 32px;
+    }
+    .score-bar-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .score-bar-track {
+      height: 4px;
+      background: var(--border);
+      position: relative;
+    }
+    .score-bar-fill {
+      height: 100%;
+      background: var(--tier-color, var(--accent));
+      transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+    .score-bar-fill::after {
+      content: '';
+      position: absolute;
+      right: 0; top: -4px;
+      width: 2px; height: 12px;
+      background: var(--tier-color, var(--accent));
+    }
+
+    /* ── Tier markers ───────────────────────────────────────────── */
+    .tier-markers {
+      display: flex;
+      margin-top: 12px;
+      gap: 2px;
+    }
+    .tier-marker {
+      flex: 1;
+      height: 2px;
+      opacity: 0.3;
+    }
+    .tier-marker.t1 { background: var(--tier1); flex: 0.2; }
+    .tier-marker.t2 { background: var(--tier2); flex: 0.35; }
+    .tier-marker.t3 { background: var(--tier3); flex: 0.2; }
+    .tier-marker.t4 { background: var(--tier4); flex: 0.15; }
+    .tier-marker.t5 { background: var(--tier5); flex: 0.1; }
+
+    /* ── Breakdown grid ─────────────────────────────────────────── */
+    .breakdown-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      margin-top: 32px;
+    }
+    .breakdown-cell {
+      background: var(--surface);
+      padding: 20px;
+    }
+    .breakdown-label {
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .breakdown-score {
+      font-family: var(--font-head);
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .breakdown-max { font-size: 12px; color: var(--muted); }
+    .breakdown-bar {
+      height: 2px;
+      background: var(--border);
+      margin-top: 10px;
+    }
+    .breakdown-bar-fill {
+      height: 100%;
+      background: var(--accent3);
+      transition: width 1s ease;
+    }
+
+    /* ── Chain activity ─────────────────────────────────────────── */
+    .chain-activity {
+      margin-top: 32px;
+    }
+    .chain-activity-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .chain-list {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .chain-pill {
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border: 1px solid var(--accent3);
+      color: var(--accent3);
+    }
+
+    /* ── Action row ─────────────────────────────────────────────── */
+    .action-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 32px;
+      flex-wrap: wrap;
+    }
+
+    /* ── State panels ───────────────────────────────────────────── */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 48px;
+      text-align: center;
+    }
+    .panel-icon {
+      font-size: 48px;
+      margin-bottom: 24px;
+      display: block;
+    }
+    .panel h2 {
+      font-family: var(--font-head);
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .panel p {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 32px;
+    }
+
+    /* ── Loading animation ──────────────────────────────────────── */
+    .loading-dots {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin: 32px 0;
+    }
+    .dot {
+      width: 6px; height: 6px;
+      background: var(--accent);
+      animation: blink 1.4s infinite;
+    }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink {
+      0%, 80%, 100% { opacity: 0.2; }
+      40%           { opacity: 1; }
+    }
+
+    .loading-status {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .loading-chain {
+      font-size: 11px;
+      color: var(--accent);
+      letter-spacing: 1px;
+      margin-top: 8px;
+      min-height: 20px;
+    }
+
+    /* ── Donate section ─────────────────────────────────────────── */
+    .donate-section {
+      margin-top: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 32px 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .donate-text h3 {
+      font-family: var(--font-head);
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .donate-text p {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* ── Footer ─────────────────────────────────────────────────── */
+    footer {
+      margin-top: 80px;
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .footer-note {
+      font-size: 10px;
+      letter-spacing: 1px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .privacy-note {
+      font-size: 10px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .privacy-dot {
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    /* ── Wallet address display ─────────────────────────────────── */
+    .wallet-display {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+    .wallet-display span {
+      color: var(--accent);
+      font-family: var(--font-mono);
+    }
+
+    /* ── Toast notification ─────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 32px; right: 32px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 16px 24px;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+      z-index: 100;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { border-color: var(--accent); color: var(--accent); }
+    .toast.error   { border-color: var(--accent2); color: var(--accent2); }
+
+    /* ── Tier colors (CSS custom property driven) ───────────────── */
+    [data-tier="1"] { --tier-color: var(--tier1); }
+    [data-tier="2"] { --tier-color: var(--tier2); }
+    [data-tier="3"] { --tier-color: var(--tier3); }
+    [data-tier="4"] { --tier-color: var(--tier4); }
+    [data-tier="5"] { --tier-color: var(--tier5); }
+
+    /* ── Responsive ─────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      .score-header    { flex-direction: column; gap: 16px; }
+      .tier-badge      { text-align: left; }
+      .breakdown-grid  { grid-template-columns: repeat(2, 1fr); }
+      .donate-section  { flex-direction: column; }
+      .score-number    { font-size: 64px; }
+    }
+
+    /* ── Fade in ────────────────────────────────────────────────── */
+    .fade-in {
+      animation: fadeIn 0.6s ease forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ── Header ──────────────────────────────────────────────── -->
+  <header>
+    <div>
+      <div class="logo">Wallet<span>Rep</span></div>
+      <div class="logo-sub">Onchain Reputation Protocol</div>
+    </div>
+    <div id="walletArea">
+      <button class="btn btn-primary" onclick="connectWallet()">Connect Wallet</button>
+    </div>
+  </header>
+
+  <!-- ── Main content area ───────────────────────────────────── -->
+  <main id="main">
+
+    <!-- STEP 1: Hero / landing -->
+    <div id="heroPanel">
+      <div class="hero">
+        <div class="hero-tag">⬡ Rep Score V1</div>
+        <h1>
+          <div>WHAT'S</div>
+          <div class="line2">YOUR</div>
+          <div class="line3">ONCHAIN REP?</div>
+        </h1>
+        <p class="hero-desc">
+          WalletRep analyzes your wallet's entire onchain history across 5 chains
+          and gives you a score from 1–100. No data is ever stored. Your keys, your reputation.
+        </p>
+        <div class="chain-badges">
+          <span class="chain-badge active">Ethereum</span>
+          <span class="chain-badge active">Base</span>
+          <span class="chain-badge active">Arbitrum</span>
+          <span class="chain-badge active">Optimism</span>
+          <span class="chain-badge active">Avalanche</span>
+          <span class="chain-badge" style="opacity:0.4">+ More soon</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <span class="panel-icon">⬡</span>
+        <h2>Connect your wallet to begin</h2>
+        <p>We'll analyze your last 3 years of onchain activity.<br/>Nothing is stored. Everything is computed live.</p>
+        <button class="btn btn-primary" onclick="connectWallet()">Connect Wallet</button>
+      </div>
+    </div>
+
+    <!-- STEP 2: Connected, ready to score -->
+    <div id="connectedPanel" style="display:none;">
+      <div style="margin-bottom:32px;">
+        <div class="wallet-display">
+          Analyzing wallet <span id="walletShort">—</span>
+        </div>
+      </div>
+      <div class="panel">
+        <span class="panel-icon">🔍</span>
+        <h2>Ready to score</h2>
+        <p>Click below to scan your onchain history across all 5 chains.<br/>This takes 10–20 seconds.</p>
+        <button class="btn btn-primary" onclick="fetchScore()">Run WalletRep Score</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: Loading -->
+    <div id="loadingPanel" style="display:none;">
+      <div class="panel">
+        <div class="loading-dots">
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+        <div class="loading-status">Scanning onchain activity</div>
+        <div class="loading-chain" id="loadingChain">Connecting to Ethereum...</div>
+      </div>
+    </div>
+
+    <!-- STEP 4: Score result -->
+    <div id="resultPanel" style="display:none;" class="fade-in">
+
+      <!-- Main score card -->
+      <div class="score-card" id="scoreCard">
+        <div class="score-header">
+          <div>
+            <div class="score-number">
+              <span id="scoreNum">—</span><span class="score-max">/100</span>
+            </div>
+          </div>
+          <div class="tier-badge">
+            <div class="tier-name" id="tierName">—</div>
+            <div class="tier-num" id="tierNum">—</div>
+          </div>
+        </div>
+
+        <!-- Score bar -->
+        <div class="score-bar-wrap">
+          <div class="score-bar-labels">
+            <span>Newbie</span>
+            <span>Explorer</span>
+            <span>D-I-T</span>
+            <span>Veteran</span>
+            <span>DEGEN</span>
+          </div>
+          <div class="score-bar-track">
+            <div class="score-bar-fill" id="scoreBar" style="width:0%"></div>
+          </div>
+          <div class="tier-markers">
+            <div class="tier-marker t1"></div>
+            <div class="tier-marker t2"></div>
+            <div class="tier-marker t3"></div>
+            <div class="tier-marker t4"></div>
+            <div class="tier-marker t5"></div>
+          </div>
+        </div>
+
+        <!-- Category breakdown -->
+        <div class="breakdown-grid" id="breakdownGrid">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Active chains -->
+        <div class="chain-activity" id="chainActivity" style="display:none;">
+          <div class="chain-activity-label">Active on</div>
+          <div class="chain-list" id="chainList"></div>
+        </div>
+
+        <!-- Actions -->
+        <div class="action-row">
+          <button class="btn btn-primary" id="mintBtn" onclick="mintSBT()">
+            Mint Soulbound Badge
+          </button>
+          <button class="btn" onclick="fetchScore()">Rescore</button>
+          <button class="btn" onclick="shareScore()">Share Score</button>
+        </div>
+      </div>
+
+      <!-- Donate section -->
+      <div class="donate-section">
+        <div class="donate-text">
+          <h3>Support WalletRep</h3>
+          <p>Help keep the project free and open for everyone.</p>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn" onclick="donate('0.001')">0.001 ETH</button>
+          <button class="btn" onclick="donate('0.01')">0.01 ETH</button>
+          <button class="btn" onclick="donate('0.05')">0.05 ETH</button>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ── Footer ──────────────────────────────────────────────── -->
+  <footer>
+    <div class="footer-note">WalletRep © 2025 — $WREP</div>
+    <div class="privacy-note">
+      <div class="privacy-dot"></div>
+      Zero data stored. Wallet IDs never saved.
+    </div>
+  </footer>
+
+</div>
+
+<!-- ── Toast ────────────────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<!-- ── Scripts ──────────────────────────────────────────────── -->
+<script>
+// ─────────────────────────────────────────────────────────────────────
+// WalletRep Frontend
+//
+// NOTE: In production, replace these with:
+//   - ethers.js (from CDN or bundled)
+//   - wagmi + RainbowKit for multi-wallet support
+//   - viem for contract interactions
+//
+// This vanilla JS version works for prototyping and demo purposes.
+// ─────────────────────────────────────────────────────────────────────
+
+// ── Config (replace with your deployed values) ─────────────────────
+const CONFIG = {
+  backendUrl:      "http://localhost:3001",   // your scoring backend
+  contractAddress: "0x...",                   // deployed WalletRep.sol
+  donationWallet:  "0x...",                   // your donation wallet
+  baseChainId:     84532,                     // 84532=Base Sepolia, 8453=Base Mainnet
+
+  // Minimal ABI for frontend interactions
+  contractABI: [
+    "function mintOrUpdateScore(uint8 score, uint8 tier, string calldata tierName, bytes calldata signature) external",
+    "function walletToken(address) view returns (uint256)",
+    "function nonces(address) view returns (uint256)",
+    "function donate() external payable",
+  ]
+};
+
+// ── App state ──────────────────────────────────────────────────────
+let state = {
+  wallet:    null,
+  provider:  null,
+  signer:    null,
+  scoreData: null,
+};
+
+// ── Category display config ────────────────────────────────────────
+const CATEGORIES = [
+  { key: "walletAge",    label: "Wallet Age",    max: 20 },
+  { key: "txVolume",     label: "TX Volume",     max: 15 },
+  { key: "txFrequency",  label: "TX Frequency",  max: 15 },
+  { key: "defiActivity", label: "DeFi Activity", max: 25 },
+  { key: "nftActivity",  label: "NFT Activity",  max: 10 },
+  { key: "multichain",   label: "Multi-chain",   max: 15 },
+];
+
+const TIER_LABELS = {
+  1: "Tier 1 — Newbie",
+  2: "Tier 2 — Explorer",
+  3: "Tier 3 — Degen-in-Training",
+  4: "Tier 4 — Veteran",
+  5: "Tier 5 — DEGEN",
+};
+
+// ── Loading chain messages ─────────────────────────────────────────
+const LOADING_STEPS = [
+  "Connecting to Ethereum...",
+  "Scanning Base activity...",
+  "Checking Arbitrum history...",
+  "Fetching Optimism data...",
+  "Analyzing Avalanche...",
+  "Computing your score...",
+];
+
+// ─────────────────────────────────────────────────────────────────────
+// WALLET CONNECTION
+// ─────────────────────────────────────────────────────────────────────
+async function connectWallet() {
+  if (!window.ethereum) {
+    showToast("No wallet detected. Install MetaMask or Rabby.", "error");
+    return;
+  }
+
+  try {
+    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    state.wallet = accounts[0];
+
+    // Show connected state
+    document.getElementById("heroPanel").style.display = "none";
+    document.getElementById("connectedPanel").style.display = "block";
+
+    const short = state.wallet.slice(0, 6) + "..." + state.wallet.slice(-4);
+    document.getElementById("walletShort").textContent = short;
+
+    // Update header button
+    document.getElementById("walletArea").innerHTML = `
+      <div>
+        <button class="btn" style="border-color:var(--accent);color:var(--accent);">
+          ${short}
+        </button>
+      </div>
+    `;
+
+    showToast("Wallet connected ✓", "success");
+  } catch (err) {
+    showToast("Connection cancelled.", "error");
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// FETCH SCORE
+// ─────────────────────────────────────────────────────────────────────
+async function fetchScore() {
+  if (!state.wallet) { showToast("Connect wallet first.", "error"); return; }
+
+  // Show loading panel
+  showPanel("loadingPanel");
+  animateLoadingChain();
+
+  try {
+    const response = await fetch(`${CONFIG.backendUrl}/api/score`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ wallet: state.wallet }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || "Scoring failed");
+    }
+
+    state.scoreData = await response.json();
+    renderScore(state.scoreData);
+    showPanel("resultPanel");
+
+  } catch (err) {
+    showPanel("connectedPanel");
+    showToast(err.message || "Failed to fetch score. Is the backend running?", "error");
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// RENDER SCORE
+// ─────────────────────────────────────────────────────────────────────
+function renderScore(data) {
+  const { score, tier, tierName, breakdown } = data;
+
+  // Set tier color via data attribute
+  document.getElementById("scoreCard").setAttribute("data-tier", tier);
+
+  // Score number (count up animation)
+  animateCount("scoreNum", 0, score, 1200);
+
+  // Score bar (animate after a tick)
+  setTimeout(() => {
+    document.getElementById("scoreBar").style.width = score + "%";
+  }, 100);
+
+  // Tier info
+  document.getElementById("tierName").textContent = tierName;
+  document.getElementById("tierNum").textContent  = TIER_LABELS[tier] || "";
+
+  // Breakdown grid
+  const grid = document.getElementById("breakdownGrid");
+  grid.innerHTML = CATEGORIES.map(cat => {
+    const pts    = breakdown[cat.key] || 0;
+    const pct    = Math.round((pts / cat.max) * 100);
+    return `
+      <div class="breakdown-cell">
+        <div class="breakdown-label">${cat.label}</div>
+        <div class="breakdown-score">${pts}<span class="breakdown-max">/${cat.max}</span></div>
+        <div class="breakdown-bar">
+          <div class="breakdown-bar-fill" style="width:${pct}%"></div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  // Active chains
+  if (data.activeChainNames && data.activeChainNames.length > 0) {
+    document.getElementById("chainActivity").style.display = "block";
+    document.getElementById("chainList").innerHTML =
+      data.activeChainNames.map(c =>
+        `<span class="chain-pill">${c}</span>`
+      ).join("");
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// MINT SBT
+// ─────────────────────────────────────────────────────────────────────
+async function mintSBT() {
+  if (!state.scoreData) return;
+  if (!window.ethereum) { showToast("No wallet found.", "error"); return; }
+
+  const btn = document.getElementById("mintBtn");
+  btn.disabled = true;
+  btn.textContent = "Minting...";
+
+  try {
+    // Switch to Base (or Base Sepolia for testnet)
+    await switchToBase();
+
+    const { score, tier, tierName, signature } = state.scoreData;
+
+    // Build the transaction manually (without ethers.js for simplicity)
+    // In production, use ethers.js Contract or wagmi writeContract
+    const iface = buildMintCalldata(score, tier, tierName, signature);
+
+    const txHash = await window.ethereum.request({
+      method: "eth_sendTransaction",
+      params: [{
+        from:  state.wallet,
+        to:    CONFIG.contractAddress,
+        data:  iface,
+        value: "0x0",
+      }]
+    });
+
+    showToast(`Minted! TX: ${txHash.slice(0, 10)}...`, "success");
+    btn.textContent = "✓ Badge Minted";
+
+  } catch (err) {
+    showToast(err.message || "Mint failed.", "error");
+    btn.disabled = false;
+    btn.textContent = "Mint Soulbound Badge";
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// DONATE
+// ─────────────────────────────────────────────────────────────────────
+async function donate(amountEth) {
+  if (!window.ethereum) { showToast("Connect wallet first.", "error"); return; }
+
+  try {
+    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    const from      = accounts[0];
+    const valueHex  = "0x" + (parseFloat(amountEth) * 1e18).toString(16);
+
+    const txHash = await window.ethereum.request({
+      method: "eth_sendTransaction",
+      params: [{
+        from,
+        to:    CONFIG.donationWallet,
+        value: valueHex,
+      }]
+    });
+
+    showToast(`Donation sent! ❤️  ${amountEth} ETH`, "success");
+  } catch (err) {
+    showToast("Donation cancelled.", "error");
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// SHARE SCORE
+// ─────────────────────────────────────────────────────────────────────
+function shareScore() {
+  if (!state.scoreData) return;
+  const { score, tierName } = state.scoreData;
+  const text = `My WalletRep score is ${score}/100 — ${tierName} tier 🔥\nCheck yours at walletrep.xyz #WalletRep $WREP`;
+
+  if (navigator.share) {
+    navigator.share({ text });
+  } else {
+    navigator.clipboard.writeText(text);
+    showToast("Score copied to clipboard!", "success");
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// UTILITIES
+// ─────────────────────────────────────────────────────────────────────
+function showPanel(id) {
+  ["heroPanel", "connectedPanel", "loadingPanel", "resultPanel"].forEach(p => {
+    document.getElementById(p).style.display = p === id ? "block" : "none";
+  });
+}
+
+function showToast(msg, type = "success") {
+  const toast = document.getElementById("toast");
+  toast.textContent = msg;
+  toast.className   = `toast ${type} show`;
+  setTimeout(() => { toast.className = `toast ${type}`; }, 3500);
+}
+
+function animateCount(id, from, to, duration) {
+  const el    = document.getElementById(id);
+  const start = performance.now();
+  const diff  = to - from;
+
+  function step(now) {
+    const t = Math.min((now - start) / duration, 1);
+    const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t; // easeInOut
+    el.textContent = Math.round(from + diff * ease);
+    if (t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function animateLoadingChain() {
+  let i = 0;
+  const el = document.getElementById("loadingChain");
+  const interval = setInterval(() => {
+    if (i >= LOADING_STEPS.length) { clearInterval(interval); return; }
+    el.textContent = LOADING_STEPS[i++];
+  }, 2500);
+}
+
+async function switchToBase() {
+  const chainHex = "0x" + CONFIG.baseChainId.toString(16);
+  try {
+    await window.ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: chainHex }],
+    });
+  } catch (err) {
+    if (err.code === 4902) {
+      // Chain not added yet, add it
+      await window.ethereum.request({
+        method: "wallet_addEthereumChain",
+        params: [{
+          chainId:         chainHex,
+          chainName:       "Base Sepolia",
+          nativeCurrency:  { name: "ETH", symbol: "ETH", decimals: 18 },
+          rpcUrls:         ["https://sepolia.base.org"],
+          blockExplorerUrls: ["https://sepolia.basescan.org"],
+        }]
+      });
+    }
+  }
+}
+
+// Minimal ABI encoding for mintOrUpdateScore
+// In production use ethers.js Interface.encodeFunctionData()
+function buildMintCalldata(score, tier, tierName, signature) {
+  // This is a placeholder — replace with ethers.js in production
+  // ethers.js example:
+  //   const iface = new ethers.Interface(CONFIG.contractABI);
+  //   return iface.encodeFunctionData("mintOrUpdateScore", [score, tier, tierName, signature]);
+  console.warn("buildMintCalldata: replace with ethers.js in production");
+  return "0x"; // placeholder
+}
+</script>
+</body>
+</html>
