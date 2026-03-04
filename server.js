@@ -2,6 +2,8 @@
 // server.js — WalletRep Scoring Backend
 //
 // Endpoints:
+//   GET  /                   — serves index.html (main app)
+//   GET  /widget.html        — serves widget.html (embeddable version)
 //   POST /api/score          — compute score, return JSON (used by frontend)
 //   GET  /score/:wallet      — shareable HTML page for a wallet's score
 //   GET  /badge/:wallet      — embeddable SVG badge  (<img src="...">)
@@ -14,6 +16,7 @@
 
 const express = require("express");
 const cors    = require("cors");
+const path    = require("path");
 require("dotenv").config();
 
 const { computeScore } = require("./scorer");
@@ -24,6 +27,10 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+
+// ── Serve frontend files ──────────────────────────────────────────────────
+app.get("/",            (_, res) => res.sendFile(path.join(__dirname, "index.html")));
+app.get("/widget.html", (_, res) => res.sendFile(path.join(__dirname, "widget.html")));
 
 // ── In-memory score cache ─────────────────────────────────────────────────
 // Avoids re-fetching for shareable links and repeated requests.
