@@ -516,21 +516,25 @@
   }
 
 
-  function wrGetProvider() {
-    if (!window.ethereum) return null;
-    if (window.ethereum.providers?.length) {
-      return (
-        window.ethereum.providers.find(p => p.isMetaMask && !p.isPhantom) ||
-        window.ethereum.providers.find(p => p.isMetaMask) ||
-        window.ethereum.providers[0]
-      );
-    }
-    return window.ethereum;
-  }
+  // EIP-6963 discovery
+  let _wrProvider = null;
+  (function () {
+    const found = [];
+    window.addEventListener("eip6963:announceProvider", (e) => found.push(e.detail));
+    window.dispatchEvent(new Event("eip6963:requestProvider"));
+    setTimeout(() => {
+      if (found.length > 0) {
+        const mm = found.find(d => d.info.rdns === "io.metamask");
+        _wrProvider = (mm || found[0]).provider;
+      } else {
+        _wrProvider = window.ethereum || null;
+      }
+    }, 300);
+  })();
 
   // ── Connect wallet ───────────────────────────────────────────────
   window.wrConnectWallet = async function () {
-    const provider = wrGetProvider();
+    const provider = _wrProvider || window.ethereum;
     if (!provider) {
       wrShowToast("No wallet detected. Install MetaMask or Rabby.", "error");
       return;

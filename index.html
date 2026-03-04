@@ -708,24 +708,29 @@ const LOADING_STEPS = [
 // ─────────────────────────────────────────────────────────────────────
 // WALLET CONNECTION
 // ─────────────────────────────────────────────────────────────────────
-function getProvider() {
-  if (!window.ethereum) return null;
-  // When multiple wallets are installed (e.g. MetaMask + Phantom), they stack
-  // under window.ethereum.providers. Phantom fakes isMetaMask=true for EVM
-  // compatibility, so we explicitly exclude it and prefer real MetaMask.
-  if (window.ethereum.providers?.length) {
-    return (
-      window.ethereum.providers.find(p => p.isMetaMask && !p.isPhantom) ||
-      window.ethereum.providers.find(p => p.isMetaMask) ||
-      window.ethereum.providers[0]
-    );
-  }
-  // Single wallet — if it's Phantom acting as MetaMask, still try it
-  return window.ethereum;
-}
+// ── EIP-6963 multi-wallet discovery ────────────────────────────────────────
+// Modern wallets announce themselves via events instead of fighting over
+// window.ethereum. We listen for announcements, then pick MetaMask by its
+// RDNS identifier. Falls back to window.ethereum for older wallets.
+let _provider = null;
+
+(function discoverProvider() {
+  const found = [];
+  window.addEventListener("eip6963:announceProvider", (e) => found.push(e.detail));
+  window.dispatchEvent(new Event("eip6963:requestProvider"));
+  setTimeout(() => {
+    if (found.length > 0) {
+      const mm = found.find(d => d.info.rdns === "io.metamask");
+      _provider = (mm || found[0]).provider;
+    } else {
+      _provider = window.ethereum || null;
+    }
+  }, 300);
+})();
 
 async function connectWallet() {
-  const provider = getProvider();
+  // Give discovery a moment if page just loaded
+  const provider = _provider || window.ethereum;
   if (!provider) {
     showToast("No wallet detected. Install MetaMask or Rabby.", "error");
     return;
