@@ -519,7 +519,11 @@
   function wrGetProvider() {
     if (!window.ethereum) return null;
     if (window.ethereum.providers?.length) {
-      return window.ethereum.providers.find(p => p.isMetaMask) || window.ethereum.providers[0];
+      return (
+        window.ethereum.providers.find(p => p.isMetaMask && !p.isPhantom) ||
+        window.ethereum.providers.find(p => p.isMetaMask) ||
+        window.ethereum.providers[0]
+      );
     }
     return window.ethereum;
   }

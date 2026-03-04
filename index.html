@@ -711,10 +711,16 @@ const LOADING_STEPS = [
 function getProvider() {
   if (!window.ethereum) return null;
   // When multiple wallets are installed (e.g. MetaMask + Phantom), they stack
-  // under window.ethereum.providers. Pick MetaMask, fall back to first available.
+  // under window.ethereum.providers. Phantom fakes isMetaMask=true for EVM
+  // compatibility, so we explicitly exclude it and prefer real MetaMask.
   if (window.ethereum.providers?.length) {
-    return window.ethereum.providers.find(p => p.isMetaMask) || window.ethereum.providers[0];
+    return (
+      window.ethereum.providers.find(p => p.isMetaMask && !p.isPhantom) ||
+      window.ethereum.providers.find(p => p.isMetaMask) ||
+      window.ethereum.providers[0]
+    );
   }
+  // Single wallet — if it's Phantom acting as MetaMask, still try it
   return window.ethereum;
 }
 
