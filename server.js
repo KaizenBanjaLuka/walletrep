@@ -22,6 +22,65 @@ require("dotenv").config();
 const { computeScore } = require("./scorer");
 const { fetchAllChains } = require("./chains");
 
+// ── Favicon (inline PNG, no external file needed) ─────────────────────────
+const FAVICON = (() => {
+  const { deflateSync } = require("zlib");
+
+  function crc32(buf) {
+    const t = new Uint32Array(256);
+    for (let i = 0; i < 256; i++) {
+      let c = i;
+      for (let j = 0; j < 8; j++) c = (c & 1) ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+      t[i] = c;
+    }
+    let c = 0xFFFFFFFF;
+    for (const b of buf) c = t[(c ^ b) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+
+  function chunk(type, data) {
+    const tb  = Buffer.from(type, "ascii");
+    const len = Buffer.alloc(4); len.writeUInt32BE(data.length);
+    const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(Buffer.concat([tb, data])));
+    return Buffer.concat([len, tb, data, crc]);
+  }
+
+  const BG = [0x0a, 0x0a, 0x0f]; // #0a0a0f
+  const GR = [0x7f, 0xff, 0x6a]; // #7fff6a
+
+  // 16×16 "W" letterform — 2-px stroke, symmetric around col 7.5
+  const MAP = [
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0],
+    [0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0],
+    [0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0],
+    [0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0],
+    [0,1,1,0,0,0,1,1,1,1,0,0,0,1,1,0],
+    [0,1,1,0,0,1,1,1,1,1,1,0,0,1,1,0],
+    [0,1,1,1,1,1,0,0,0,0,1,1,1,1,1,0],
+    [0,0,1,1,1,0,0,0,0,0,0,1,1,1,0,0],
+    [0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+  ];
+
+  const raw = [];
+  for (let y = 0; y < 16; y++) {
+    raw.push(0); // filter: None
+    for (let x = 0; x < 16; x++) raw.push(...(MAP[y][x] ? GR : BG));
+  }
+
+  const sig  = Buffer.from([137,80,78,71,13,10,26,10]);
+  const ihdr = chunk("IHDR", Buffer.from([0,0,0,16, 0,0,0,16, 8,2,0,0,0]));
+  const idat = chunk("IDAT", deflateSync(Buffer.from(raw)));
+  const iend = chunk("IEND", Buffer.alloc(0));
+  return Buffer.concat([sig, ihdr, idat, iend]);
+})();
+
 const app  = express();
 const PORT = process.env.PORT || 3001;
 
@@ -31,6 +90,11 @@ app.use(express.json());
 // ── Serve frontend files ──────────────────────────────────────────────────
 app.get("/",            (_, res) => res.sendFile(path.join(__dirname, "index.html")));
 app.get("/widget.html", (_, res) => res.sendFile(path.join(__dirname, "widget.html")));
+app.get("/favicon.ico", (_, res) => {
+  res.setHeader("Content-Type", "image/x-icon");
+  res.setHeader("Cache-Control", "public, max-age=86400");
+  res.send(FAVICON);
+});
 
 // ── In-memory score cache ─────────────────────────────────────────────────
 // Avoids re-fetching for shareable links and repeated requests.
@@ -43,11 +107,11 @@ async function getScore(wallet) {
   const cached = scoreCache.get(key);
 
   if (cached && Date.now() - cached.cachedAt < CACHE_TTL) {
-    console.log(`Cache hit: ${key}`);
+    console.log(`Cache hit`);
     return cached;
   }
 
-  console.log(`Scoring wallet: ${wallet}`);
+  console.log(`Scoring new request`);
   const chainData = await fetchAllChains(wallet);
   const { score, tier, tierName, breakdown } = computeScore(chainData);
 
@@ -68,6 +132,21 @@ async function getScore(wallet) {
 // ── Rate limiting (POST /api/score only) ──────────────────────────────────
 const requestLog  = new Map();
 const RATE_LIMIT  = 60 * 1000; // 1 request per minute per wallet
+
+// ── Cache / rate-limit cleanup (every 10 minutes) ─────────────────────────
+const CLEANUP_INTERVAL = 10 * 60 * 1000;
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of scoreCache) {
+    if (now - v.cachedAt >= CACHE_TTL) scoreCache.delete(k);
+  }
+}, CLEANUP_INTERVAL);
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of requestLog) {
+    if (now - v >= RATE_LIMIT) requestLog.delete(k);
+  }
+}, CLEANUP_INTERVAL);
 
 function isRateLimited(wallet) {
   const key  = wallet.toLowerCase();
