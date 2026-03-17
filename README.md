@@ -1,4 +1,7 @@
-# WalletRep ($WREP)
+# WalletRep ($WREP) 
+
+wlltrep.xyz
+
 ### Onchain Reputation Protocol
 
 WalletRep analyzes a wallet's entire onchain history across 5 EVM chains and assigns a 1–100 reputation score, divided into 5 named tiers. Scores can optionally be minted as a Soulbound Token (SBT) on Base. **No wallet addresses or activity data are ever stored.**
