@@ -8,21 +8,25 @@
   <style>
     /* ── Variables ──────────────────────────────────────────────── */
     :root {
-      --bg:        #0a0a0f;
-      --surface:   #111118;
-      --border:    #1e1e2e;
-      --text:      #e8e8f0;
-      --muted:     #5a5a72;
-      --accent:    #7fff6a;
-      --accent2:   #ff6a3d;
-      --accent3:   #6a8fff;
-      --tier1:     #5a5a72;
-      --tier2:     #6a8fff;
-      --tier3:     #f0c050;
-      --tier4:     #ff6a3d;
-      --tier5:     #7fff6a;
-      --font-head: 'Syne', sans-serif;
-      --font-mono: 'DM Mono', monospace;
+      --bg:            #0E0C1A;
+      --surface:       #120F28;
+      --border:        #2A2550;
+      --text:          #EEEDFE;
+      --muted:         #888780;
+      --accent:        #7F77DD;
+      --accent2:       #ff6a3d;
+      --accent-border: #534AB7;
+      --accent-deep:   #3C3489;
+      --accent-dark:   #26215C;
+      --accent-light:  #AFA9EC;
+      --accent-fill:   #1A1535;
+      --tier1:         #5a5a72;
+      --tier2:         #6a8fff;
+      --tier3:         #f0c050;
+      --tier4:         #ff6a3d;
+      --tier5:         #7F77DD;
+      --font-head:     'Syne', sans-serif;
+      --font-mono:     'DM Mono', monospace;
     }
 
     /* ── Reset ──────────────────────────────────────────────────── */
@@ -70,6 +74,8 @@
       justify-content: space-between;
       align-items: flex-start;
       margin-bottom: 80px;
+      border-bottom: 0.5px solid var(--border);
+      padding-bottom: 20px;
     }
 
     .logo {
@@ -77,87 +83,112 @@
       font-weight: 800;
       font-size: 22px;
       letter-spacing: -0.5px;
+      color: var(--text);
     }
     .logo span { color: var(--accent); }
 
     .logo-sub {
       font-family: var(--font-mono);
-      font-size: 10px;
-      color: var(--muted);
-      letter-spacing: 2px;
+      font-size: 9px;
+      color: var(--accent-border);
+      letter-spacing: 0.18em;
       text-transform: uppercase;
       margin-top: 2px;
     }
 
-    /* ── Wallet button ──────────────────────────────────────────── */
+    /* ── Nav connect button ─────────────────────────────────────── */
+    .btn-nav {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent-light);
+      border: 0.5px solid var(--accent-border);
+      background: transparent;
+      border-radius: 6px;
+      padding: 9px 20px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-nav:hover { background: #1E1940; }
+
+    /* ── Secondary button (Copy Badge, Rescore, etc.) ───────────── */
     .btn {
       font-family: var(--font-mono);
       font-size: 12px;
       font-weight: 500;
       letter-spacing: 1px;
       text-transform: uppercase;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text);
+      border: 0.5px solid var(--accent-border);
+      background: transparent;
+      color: var(--accent-light);
       padding: 10px 20px;
+      border-radius: 4px;
       cursor: pointer;
-      transition: all 0.2s;
-      position: relative;
-      overflow: hidden;
+      transition: background 0.2s;
     }
-    .btn::after {
-      content: '';
-      position: absolute; inset: 0;
-      background: var(--accent);
-      opacity: 0;
-      transition: opacity 0.2s;
-    }
-    .btn:hover { border-color: var(--accent); color: var(--accent); }
-    .btn:hover::after { opacity: 0.05; }
+    .btn:hover { background: #1E1940; }
     .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+    /* ── Primary CTA button ─────────────────────────────────────── */
     .btn-primary {
-      border-color: var(--accent);
-      color: var(--accent);
-      font-size: 13px;
-      padding: 14px 32px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      background: var(--accent-border);
+      color: var(--text);
+      border: none;
+      border-radius: 7px;
+      padding: 14px 48px;
+      cursor: pointer;
+      transition: background 0.2s;
     }
-    .btn-primary:hover { background: var(--accent); color: var(--bg); }
-    .btn-primary:hover::after { opacity: 0; }
+    .btn-primary:hover { background: var(--accent); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
 
     /* ── Hero ───────────────────────────────────────────────────── */
     .hero { margin-bottom: 64px; }
 
+    /* Pill badge */
     .hero-tag {
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent-fill);
+      border: 0.5px solid var(--accent-deep);
+      border-radius: 20px;
+      padding: 5px 14px;
+      margin-bottom: 28px;
+      font-family: var(--font-mono);
       font-size: 10px;
-      letter-spacing: 3px;
+      letter-spacing: 0.14em;
+      color: var(--accent-light);
       text-transform: uppercase;
-      color: var(--accent);
-      border: 1px solid var(--accent);
-      padding: 4px 12px;
-      margin-bottom: 24px;
-      opacity: 0.8;
+    }
+    .hero-tag-dot {
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      flex-shrink: 0;
     }
 
     .hero h1 {
       font-family: var(--font-head);
-      font-size: clamp(42px, 8vw, 80px);
+      font-size: clamp(36px, 5.5vw, 52px);
       font-weight: 800;
-      line-height: 0.95;
-      letter-spacing: -2px;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
       margin-bottom: 24px;
     }
-
     .hero h1 .line2 { color: var(--accent); }
-    .hero h1 .line3 { color: var(--muted); }
+    .hero h1 .line3 { color: var(--accent-deep); }
 
     .hero-desc {
-      font-size: 13px;
-      color: var(--muted);
+      font-size: 14px;
+      color: #888780;
       max-width: 480px;
-      line-height: 1.7;
-      letter-spacing: 0.3px;
+      line-height: 1.75;
     }
 
     /* ── Chain badges ───────────────────────────────────────────── */
@@ -168,20 +199,89 @@
       margin: 32px 0;
     }
     .chain-badge {
-      font-size: 10px;
-      letter-spacing: 1.5px;
+      font-size: 9px;
+      letter-spacing: 0.12em;
       text-transform: uppercase;
-      color: var(--muted);
-      border: 1px solid var(--border);
-      padding: 4px 10px;
-      transition: color 0.2s, border-color 0.2s;
+      color: var(--accent);
+      border: 0.5px solid var(--accent-deep);
+      border-radius: 4px;
+      padding: 5px 12px;
     }
-    .chain-badge.active { color: var(--accent3); border-color: var(--accent3); }
+    .chain-badge.more {
+      color: var(--accent-border);
+      border: none;
+    }
+
+    /* ── Connect / state panels ─────────────────────────────────── */
+    .panel {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: 14px;
+      padding: 56px 32px 48px;
+      text-align: center;
+    }
+    .panel-icon {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+    .panel h2 {
+      font-family: var(--font-head);
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .panel p {
+      font-size: 13px;
+      color: #5F5E5A;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+    .panel p .stored { color: var(--accent-border); }
+
+    /* Trust note below CTA */
+    .trust-note {
+      font-size: 10px !important;
+      color: var(--accent-deep) !important;
+      letter-spacing: 0.06em !important;
+      margin-top: 16px !important;
+      margin-bottom: 0 !important;
+      line-height: 1.5 !important;
+    }
+    .trust-note span { color: var(--accent-border); }
+
+    /* ── Stats bar ──────────────────────────────────────────────── */
+    .stats-bar {
+      display: flex;
+      border-top: 0.5px solid var(--border);
+      margin-top: 40px;
+    }
+    .stats-cell {
+      flex: 1;
+      background: var(--bg);
+      padding: 20px 0;
+      text-align: center;
+    }
+    .stats-cell + .stats-cell { border-left: 1px solid var(--border); }
+    .stats-num {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .stats-label {
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      color: #444441;
+      margin-top: 4px;
+      text-transform: uppercase;
+    }
 
     /* ── Score card ─────────────────────────────────────────────── */
     .score-card {
       background: var(--surface);
-      border: 1px solid var(--border);
+      border: 0.5px solid var(--border);
+      border-radius: 14px;
       padding: 48px;
       margin-bottom: 24px;
       position: relative;
@@ -212,9 +312,7 @@
     }
     .score-max { font-size: 24px; color: var(--muted); letter-spacing: 0; }
 
-    .tier-badge {
-      text-align: right;
-    }
+    .tier-badge { text-align: right; }
     .tier-name {
       font-family: var(--font-head);
       font-size: 28px;
@@ -231,9 +329,7 @@
     }
 
     /* ── Score bar ──────────────────────────────────────────────── */
-    .score-bar-wrap {
-      margin-bottom: 32px;
-    }
+    .score-bar-wrap { margin-bottom: 32px; }
     .score-bar-labels {
       display: flex;
       justify-content: space-between;
@@ -268,11 +364,7 @@
       margin-top: 12px;
       gap: 2px;
     }
-    .tier-marker {
-      flex: 1;
-      height: 2px;
-      opacity: 0.3;
-    }
+    .tier-marker { flex: 1; height: 2px; opacity: 0.3; }
     .tier-marker.t1 { background: var(--tier1); flex: 0.2; }
     .tier-marker.t2 { background: var(--tier2); flex: 0.35; }
     .tier-marker.t3 { background: var(--tier3); flex: 0.2; }
@@ -285,7 +377,9 @@
       grid-template-columns: repeat(3, 1fr);
       gap: 1px;
       background: var(--border);
-      border: 1px solid var(--border);
+      border: 0.5px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
       margin-top: 32px;
     }
     .breakdown-cell {
@@ -313,14 +407,12 @@
     }
     .breakdown-bar-fill {
       height: 100%;
-      background: var(--accent3);
+      background: var(--accent);
       transition: width 1s ease;
     }
 
     /* ── Chain activity ─────────────────────────────────────────── */
-    .chain-activity {
-      margin-top: 32px;
-    }
+    .chain-activity { margin-top: 32px; }
     .chain-activity-label {
       font-size: 10px;
       letter-spacing: 2px;
@@ -328,18 +420,15 @@
       color: var(--muted);
       margin-bottom: 12px;
     }
-    .chain-list {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
+    .chain-list { display: flex; gap: 8px; flex-wrap: wrap; }
     .chain-pill {
       font-size: 10px;
       letter-spacing: 1px;
       text-transform: uppercase;
       padding: 4px 12px;
-      border: 1px solid var(--accent3);
-      color: var(--accent3);
+      border: 0.5px solid var(--accent-border);
+      color: var(--accent);
+      border-radius: 4px;
     }
 
     /* ── Action row ─────────────────────────────────────────────── */
@@ -348,31 +437,6 @@
       gap: 12px;
       margin-top: 32px;
       flex-wrap: wrap;
-    }
-
-    /* ── State panels ───────────────────────────────────────────── */
-    .panel {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      padding: 48px;
-      text-align: center;
-    }
-    .panel-icon {
-      font-size: 48px;
-      margin-bottom: 24px;
-      display: block;
-    }
-    .panel h2 {
-      font-family: var(--font-head);
-      font-size: 28px;
-      font-weight: 700;
-      margin-bottom: 12px;
-    }
-    .panel p {
-      font-size: 13px;
-      color: var(--muted);
-      line-height: 1.7;
-      margin-bottom: 32px;
     }
 
     /* ── Loading animation ──────────────────────────────────────── */
@@ -393,7 +457,6 @@
       0%, 80%, 100% { opacity: 0.2; }
       40%           { opacity: 1; }
     }
-
     .loading-status {
       font-size: 11px;
       color: var(--muted);
@@ -408,11 +471,11 @@
       min-height: 20px;
     }
 
-/* ── Footer ─────────────────────────────────────────────────── */
+    /* ── Footer ─────────────────────────────────────────────────── */
     footer {
       margin-top: 80px;
-      padding-top: 32px;
-      border-top: 1px solid var(--border);
+      padding: 18px 40px;
+      border-top: 0.5px solid var(--accent-fill);
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -421,26 +484,21 @@
     }
     .footer-note {
       font-size: 10px;
-      letter-spacing: 1px;
-      color: var(--muted);
+      letter-spacing: 0.08em;
+      color: var(--accent-deep);
       text-transform: uppercase;
     }
     .privacy-note {
       font-size: 10px;
-      color: var(--muted);
+      color: var(--accent-deep);
       display: flex;
       align-items: center;
       gap: 6px;
     }
     .privacy-dot {
-      width: 6px; height: 6px;
-      background: var(--accent);
+      width: 5px; height: 5px;
+      background: var(--accent-border);
       border-radius: 50%;
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: 0.3; }
     }
 
     /* ── Wallet address display ─────────────────────────────────── */
@@ -459,7 +517,8 @@
       position: fixed;
       bottom: 32px; right: 32px;
       background: var(--surface);
-      border: 1px solid var(--border);
+      border: 0.5px solid var(--border);
+      border-radius: 8px;
       padding: 16px 24px;
       font-size: 12px;
       letter-spacing: 0.5px;
@@ -486,6 +545,7 @@
       .breakdown-grid  { grid-template-columns: repeat(2, 1fr); }
       .donate-section  { flex-direction: column; }
       .score-number    { font-size: 64px; }
+      footer           { padding: 18px 16px; }
     }
 
     /* ── Fade in ────────────────────────────────────────────────── */
@@ -509,7 +569,7 @@
       <div class="logo-sub">Onchain Reputation Protocol</div>
     </div>
     <div id="walletArea">
-      <button class="btn btn-primary" onclick="connectWallet()">Connect Wallet</button>
+      <button class="btn-nav" onclick="connectWallet()">Connect Wallet</button>
     </div>
   </header>
 
@@ -519,31 +579,58 @@
     <!-- STEP 1: Hero / landing -->
     <div id="heroPanel">
       <div class="hero">
-        <div class="hero-tag">⬡ Rep Score V1</div>
+        <div class="hero-tag">
+          <span class="hero-tag-dot"></span>
+          REP SCORE V1
+        </div>
         <h1>
-          <div>WHAT'S</div>
-          <div class="line2">YOUR</div>
-          <div class="line3">ONCHAIN REP?</div>
+          <div>What's your</div>
+          <div class="line2">onchain</div>
+          <div class="line3">reputation?</div>
         </h1>
         <p class="hero-desc">
           WalletRep analyzes your wallet's entire onchain history across 5 chains
           and gives you a score from 1–100. No data is ever stored. Your keys, your reputation.
         </p>
         <div class="chain-badges">
-          <span class="chain-badge active">Ethereum</span>
-          <span class="chain-badge active">Base</span>
-          <span class="chain-badge active">Arbitrum</span>
-          <span class="chain-badge active">Optimism</span>
-          <span class="chain-badge active">Avalanche</span>
-          <span class="chain-badge" style="opacity:0.4">+ More soon</span>
+          <span class="chain-badge">Ethereum</span>
+          <span class="chain-badge">Base</span>
+          <span class="chain-badge">Arbitrum</span>
+          <span class="chain-badge">Optimism</span>
+          <span class="chain-badge">Avalanche</span>
+          <span class="chain-badge more">+ More Soon</span>
         </div>
       </div>
 
+      <!-- Connect card -->
       <div class="panel">
-        <span class="panel-icon">⬡</span>
+        <div class="panel-icon">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+            <polygon points="20,4 36,13 36,27 20,36 4,27 4,13" fill="none" stroke="#534AB7" stroke-width="1"/>
+            <polygon points="20,10 30,16 30,24 20,30 10,24 10,16" fill="#1A1535" stroke="#7F77DD" stroke-width="0.8"/>
+            <circle cx="20" cy="20" r="4" fill="#7F77DD"/>
+          </svg>
+        </div>
         <h2>Connect your wallet to begin</h2>
-        <p>We'll analyze your last 3 years of onchain activity.<br/>Nothing is stored. Everything is computed live.</p>
-        <button class="btn btn-primary" onclick="connectWallet()">Connect Wallet</button>
+        <p>We'll analyze your last 3 years of onchain activity. <span class="stored">Nothing is stored.</span> Everything is computed live.</p>
+        <button class="btn-primary" onclick="connectWallet()">Connect Wallet</button>
+        <p class="trust-note">Wallet connection verifies <span>ownership</span> — we never request signing permissions</p>
+      </div>
+
+      <!-- Stats bar -->
+      <div class="stats-bar">
+        <div class="stats-cell">
+          <div class="stats-num">5</div>
+          <div class="stats-label">Chains Scored</div>
+        </div>
+        <div class="stats-cell">
+          <div class="stats-num">6</div>
+          <div class="stats-label">Scoring Dimensions</div>
+        </div>
+        <div class="stats-cell">
+          <div class="stats-num">5</div>
+          <div class="stats-label">Reputation Tiers</div>
+        </div>
       </div>
     </div>
 
@@ -555,10 +642,10 @@
         </div>
       </div>
       <div class="panel">
-        <span class="panel-icon">🔍</span>
+        <div class="panel-icon" style="font-size:48px;">🔍</div>
         <h2>Ready to score</h2>
         <p>Click below to scan your onchain history across all 5 chains.<br/>This takes 10–20 seconds.</p>
-        <button class="btn btn-primary" onclick="fetchScore()">Run WalletRep Score</button>
+        <button class="btn-primary" onclick="fetchScore()">Run WalletRep Score</button>
       </div>
     </div>
 
@@ -626,12 +713,11 @@
 
         <!-- Actions -->
         <div class="action-row">
-          <button class="btn btn-primary" onclick="shareScore()">Share Score</button>
+          <button class="btn-primary" onclick="shareScore()">Share Score</button>
           <button class="btn" onclick="copyBadge()">Copy Badge</button>
           <button class="btn" onclick="fetchScore()">Rescore</button>
         </div>
       </div>
-
 
     </div>
 
@@ -639,7 +725,7 @@
 
   <!-- ── Footer ──────────────────────────────────────────────── -->
   <footer>
-    <div class="footer-note">WalletRep © 2025 — $WREP</div>
+    <div class="footer-note">WALLETREP © 2025 — $WREP</div>
     <div class="privacy-note">
       <div class="privacy-dot"></div>
       Zero data stored. Wallet IDs never saved.
