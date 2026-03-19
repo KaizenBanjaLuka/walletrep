@@ -17,69 +17,22 @@
 const express = require("express");
 const cors    = require("cors");
 const path    = require("path");
+const fs      = require("fs");
 require("dotenv").config();
 
 const { computeScore } = require("./scorer");
 const { fetchAllChains } = require("./chains");
 
-// ── Favicon (inline PNG, no external file needed) ─────────────────────────
-const FAVICON = (() => {
-  const { deflateSync } = require("zlib");
+// ── Favicon + tier badge SVGs (loaded from frontend/) ────────────────────
+const FAVICON_SVG = fs.readFileSync(path.join(__dirname, "../frontend/favicon.svg"));
 
-  function crc32(buf) {
-    const t = new Uint32Array(256);
-    for (let i = 0; i < 256; i++) {
-      let c = i;
-      for (let j = 0; j < 8; j++) c = (c & 1) ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
-      t[i] = c;
-    }
-    let c = 0xFFFFFFFF;
-    for (const b of buf) c = t[(c ^ b) & 0xFF] ^ (c >>> 8);
-    return (c ^ 0xFFFFFFFF) >>> 0;
-  }
-
-  function chunk(type, data) {
-    const tb  = Buffer.from(type, "ascii");
-    const len = Buffer.alloc(4); len.writeUInt32BE(data.length);
-    const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(Buffer.concat([tb, data])));
-    return Buffer.concat([len, tb, data, crc]);
-  }
-
-  const BG = [0x0a, 0x0a, 0x0f]; // #0a0a0f
-  const GR = [0x7f, 0xff, 0x6a]; // #7fff6a
-
-  // 16×16 "W" letterform — 2-px stroke, symmetric around col 7.5
-  const MAP = [
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0],
-    [0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0],
-    [0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0],
-    [0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0],
-    [0,1,1,0,0,0,1,1,1,1,0,0,0,1,1,0],
-    [0,1,1,0,0,1,1,1,1,1,1,0,0,1,1,0],
-    [0,1,1,1,1,1,0,0,0,0,1,1,1,1,1,0],
-    [0,0,1,1,1,0,0,0,0,0,0,1,1,1,0,0],
-    [0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  ];
-
-  const raw = [];
-  for (let y = 0; y < 16; y++) {
-    raw.push(0); // filter: None
-    for (let x = 0; x < 16; x++) raw.push(...(MAP[y][x] ? GR : BG));
-  }
-
-  const sig  = Buffer.from([137,80,78,71,13,10,26,10]);
-  const ihdr = chunk("IHDR", Buffer.from([0,0,0,16, 0,0,0,16, 8,2,0,0,0]));
-  const idat = chunk("IDAT", deflateSync(Buffer.from(raw)));
-  const iend = chunk("IEND", Buffer.alloc(0));
-  return Buffer.concat([sig, ihdr, idat, iend]);
-})();
+const BADGE_SVGS = {
+  1: fs.readFileSync(path.join(__dirname, "../frontend/badge-tier1-newbie.svg"),            "utf8"),
+  2: fs.readFileSync(path.join(__dirname, "../frontend/badge-tier2-explorer.svg"),          "utf8"),
+  3: fs.readFileSync(path.join(__dirname, "../frontend/badge-tier3-degen-in-training.svg"), "utf8"),
+  4: fs.readFileSync(path.join(__dirname, "../frontend/badge-tier4-veteran.svg"),           "utf8"),
+  5: fs.readFileSync(path.join(__dirname, "../frontend/badge-tier5-degen.svg"),             "utf8"),
+};
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -91,9 +44,9 @@ app.use(express.json());
 app.get("/",            (_, res) => res.sendFile(path.join(__dirname, "index.html")));
 app.get("/widget.html", (_, res) => res.sendFile(path.join(__dirname, "widget.html")));
 app.get("/favicon.ico", (_, res) => {
-  res.setHeader("Content-Type", "image/x-icon");
+  res.setHeader("Content-Type", "image/svg+xml");
   res.setHeader("Cache-Control", "public, max-age=86400");
-  res.send(FAVICON);
+  res.send(FAVICON_SVG);
 });
 
 // ── In-memory score cache ─────────────────────────────────────────────────
@@ -245,7 +198,7 @@ app.listen(PORT, () => {
 // ─────────────────────────────────────────────────────────────────────────────
 // renderScorePage — server-rendered shareable HTML page
 // ─────────────────────────────────────────────────────────────────────────────
-const TIER_COLORS = { 1: "#5a5a72", 2: "#6a8fff", 3: "#f0c050", 4: "#ff6a3d", 5: "#7fff6a" };
+const TIER_COLORS = { 1: "#5a5a72", 2: "#6a8fff", 3: "#f0c050", 4: "#ff6a3d", 5: "#7F77DD" };
 
 const CATEGORIES = [
   { key: "walletAge",    label: "Wallet Age",    max: 20 },
@@ -262,29 +215,29 @@ function shortWallet(addr) {
 
 function renderScorePage(data) {
   const { score, tier, tierName, breakdown, activeChainNames, wallet } = data;
-  const color    = TIER_COLORS[tier] || "#7fff6a";
-  const short    = shortWallet(wallet);
-  const fillPct  = score + "%";
-  const appUrl   = process.env.APP_URL || "https://walletrep.xyz";
+  const color   = TIER_COLORS[tier] || "#7F77DD";
+  const short   = shortWallet(wallet);
+  const fillPct = score + "%";
+  const appUrl  = process.env.APP_URL || "https://walletrep.xyz";
 
   const breakdownCells = CATEGORIES.map(cat => {
     const pts = breakdown[cat.key] || 0;
     const pct = Math.round((pts / cat.max) * 100);
     return `
-      <div style="background:#111118;padding:16px;">
-        <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#5a5a72;margin-bottom:6px;">${cat.label}</div>
-        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#e8e8f0;">
-          ${pts}<span style="font-size:11px;color:#5a5a72;">/${cat.max}</span>
+      <div style="background:#120F28;padding:16px;">
+        <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#888780;margin-bottom:6px;">${cat.label}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#EEEDFE;">
+          ${pts}<span style="font-size:11px;color:#888780;">/${cat.max}</span>
         </div>
-        <div style="height:2px;background:#1e1e2e;margin-top:8px;">
-          <div style="height:100%;width:${pct}%;background:#6a8fff;"></div>
+        <div style="height:2px;background:#2A2550;margin-top:8px;">
+          <div style="height:100%;width:${pct}%;background:#7F77DD;"></div>
         </div>
       </div>`;
   }).join("");
 
   const chainPills = activeChainNames.length > 0
     ? activeChainNames.map(c =>
-        `<span style="font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:4px 12px;border:1px solid #6a8fff;color:#6a8fff;">${c}</span>`
+        `<span style="font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:4px 12px;border:0.5px solid #534AB7;color:#7F77DD;border-radius:4px;">${c}</span>`
       ).join("")
     : "";
 
@@ -303,14 +256,14 @@ function renderScorePage(data) {
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background: #0a0a0f; color: #e8e8f0;
+      background: #0E0C1A; color: #EEEDFE;
       font-family: 'DM Mono', monospace; min-height: 100vh;
     }
     body::after {
       content: ''; position: fixed; inset: 0;
       background-image:
-        linear-gradient(#1e1e2e 1px, transparent 1px),
-        linear-gradient(90deg, #1e1e2e 1px, transparent 1px);
+        linear-gradient(#2A2550 1px, transparent 1px),
+        linear-gradient(90deg, #2A2550 1px, transparent 1px);
       background-size: 48px 48px;
       pointer-events: none; z-index: 0; opacity: 0.3;
     }
@@ -328,33 +281,33 @@ function renderScorePage(data) {
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:48px;">
     <div>
       <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:18px;letter-spacing:-0.5px;">
-        Wallet<span style="color:#7fff6a;">Rep</span>
+        Wallet<span style="color:#7F77DD;">Rep</span>
       </div>
-      <div style="font-size:10px;letter-spacing:2px;color:#5a5a72;text-transform:uppercase;margin-top:2px;">Onchain Reputation</div>
+      <div style="font-size:9px;letter-spacing:0.18em;color:#534AB7;text-transform:uppercase;margin-top:2px;">Onchain Reputation</div>
     </div>
-    <div style="font-size:11px;color:#5a5a72;letter-spacing:1px;">${short}</div>
+    <div style="font-size:11px;color:#AFA9EC;letter-spacing:1px;">${short}</div>
   </div>
 
   <!-- Score card -->
-  <div style="background:#111118;border:1px solid #1e1e2e;padding:40px;position:relative;overflow:hidden;margin-bottom:24px;">
+  <div style="background:#120F28;border:0.5px solid #2A2550;border-radius:14px;padding:40px;position:relative;overflow:hidden;margin-bottom:24px;">
     <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,${color},transparent);"></div>
 
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;flex-wrap:wrap;gap:16px;">
       <div style="font-family:'Syne',sans-serif;font-size:96px;font-weight:800;line-height:1;color:${color};letter-spacing:-4px;">
-        ${score}<span style="font-size:24px;color:#5a5a72;letter-spacing:0;">/100</span>
+        ${score}<span style="font-size:24px;color:#888780;letter-spacing:0;">/100</span>
       </div>
       <div style="text-align:right;">
         <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:${color};">${tierName}</div>
-        <div style="font-size:11px;letter-spacing:2px;color:#5a5a72;text-transform:uppercase;margin-top:4px;">Tier ${tier}</div>
+        <div style="font-size:11px;letter-spacing:2px;color:#888780;text-transform:uppercase;margin-top:4px;">Tier ${tier}</div>
       </div>
     </div>
 
     <!-- Score bar -->
     <div style="margin-bottom:32px;">
-      <div style="display:flex;justify-content:space-between;font-size:9px;letter-spacing:1px;color:#5a5a72;text-transform:uppercase;margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;font-size:9px;letter-spacing:1px;color:#888780;text-transform:uppercase;margin-bottom:8px;">
         <span>Newbie</span><span>Intern</span><span>Activus</span><span>Vet</span><span>Degen</span>
       </div>
-      <div style="height:4px;background:#1e1e2e;position:relative;">
+      <div style="height:4px;background:#2A2550;position:relative;">
         <div style="height:100%;width:${fillPct};background:${color};position:relative;">
           <div style="position:absolute;right:0;top:-4px;width:2px;height:12px;background:${color};"></div>
         </div>
@@ -364,18 +317,18 @@ function renderScorePage(data) {
         <div style="flex:0.35;height:2px;background:#6a8fff;opacity:0.4;"></div>
         <div style="flex:0.2;height:2px;background:#f0c050;opacity:0.4;"></div>
         <div style="flex:0.15;height:2px;background:#ff6a3d;opacity:0.4;"></div>
-        <div style="flex:0.1;height:2px;background:#7fff6a;opacity:0.4;"></div>
+        <div style="flex:0.1;height:2px;background:#7F77DD;opacity:0.4;"></div>
       </div>
     </div>
 
     <!-- Breakdown -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#1e1e2e;border:1px solid #1e1e2e;">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#2A2550;border:0.5px solid #2A2550;border-radius:8px;overflow:hidden;">
       ${breakdownCells}
     </div>
 
     ${activeChainNames.length > 0 ? `
     <div style="margin-top:28px;">
-      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#5a5a72;margin-bottom:10px;">Active on</div>
+      <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#888780;margin-bottom:10px;">Active on</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">${chainPills}</div>
     </div>` : ""}
 
@@ -383,10 +336,10 @@ function renderScorePage(data) {
 
   <!-- CTA -->
   <div style="text-align:center;margin-top:32px;">
-    <p style="font-size:12px;color:#5a5a72;margin-bottom:20px;letter-spacing:0.5px;">
+    <p style="font-size:12px;color:#888780;margin-bottom:20px;letter-spacing:0.5px;">
       What's your onchain rep?
     </p>
-    <a href="${appUrl}" style="display:inline-block;font-family:'DM Mono',monospace;font-size:12px;font-weight:500;letter-spacing:1px;text-transform:uppercase;border:1px solid #7fff6a;color:#7fff6a;padding:14px 32px;text-decoration:none;">
+    <a href="${appUrl}" style="display:inline-block;font-family:'DM Mono',monospace;font-size:12px;font-weight:500;letter-spacing:1px;text-transform:uppercase;border:0.5px solid #534AB7;color:#7F77DD;border-radius:7px;padding:14px 32px;text-decoration:none;">
       Check Your Score
     </a>
   </div>
@@ -397,30 +350,12 @@ function renderScorePage(data) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// renderBadge — embeddable SVG badge
+// renderBadge — tier badge SVG with actual score injected
 // Usage: <img src="https://your-url.com/badge/0x...">
 // ─────────────────────────────────────────────────────────────────────────────
 function renderBadge(data) {
-  const { score, tier, tierName, wallet } = data;
-  const color = TIER_COLORS[tier] || "#7fff6a";
-  const short = shortWallet(wallet);
-
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="280" height="88" role="img" aria-label="WalletRep score ${score}/100 — ${tierName}">
-  <title>WalletRep: ${score}/100 — ${tierName}</title>
-  <!-- Background -->
-  <rect width="280" height="88" fill="#111118" rx="4"/>
-  <!-- Tier color top bar -->
-  <rect width="280" height="3" fill="${color}" rx="2"/>
-  <!-- Border -->
-  <rect x="0.5" y="0.5" width="279" height="87" fill="none" stroke="#1e1e2e" stroke-width="1" rx="4"/>
-  <!-- Label -->
-  <text x="16" y="30" font-family="monospace" font-size="10" font-weight="500" letter-spacing="2" fill="#5a5a72" text-anchor="start">WALLETREP</text>
-  <!-- Score -->
-  <text x="16" y="62" font-family="monospace" font-size="32" font-weight="700" fill="${color}" text-anchor="start">${score}</text>
-  <text x="${16 + (score >= 100 ? 60 : score >= 10 ? 42 : 24)}" y="62" font-family="monospace" font-size="14" fill="#5a5a72" text-anchor="start">/100</text>
-  <!-- Tier name -->
-  <text x="16" y="78" font-family="monospace" font-size="10" letter-spacing="1" fill="${color}" text-anchor="start">${tierName.toUpperCase()}</text>
-  <!-- Wallet address -->
-  <text x="264" y="78" font-family="monospace" font-size="9" fill="#5a5a72" text-anchor="end">${short}</text>
-</svg>`;
+  const { score, tier } = data;
+  const svg = BADGE_SVGS[tier] || BADGE_SVGS[1];
+  // Replace the static score-range text (y="144") with the wallet's actual score
+  return svg.replace(/(<text[^>]+y="144"[^>]*>)[^<]*(<\/text>)/, `$1${score} / 100$2`);
 }
