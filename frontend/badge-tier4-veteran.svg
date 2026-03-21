@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="160" viewBox="0 0 120 160">
+  <!-- WalletRep Badge — Tier 4: Veteran -->
+  <rect width="120" height="160" rx="14" fill="#4A1B0C" stroke="#F0997B" stroke-width="0.8"/>
+  <!-- dashed orbit ring -->
+  <circle cx="60" cy="64" r="34" fill="none" stroke="#993C1D" stroke-width="0.8" stroke-dasharray="6 3"/>
+  <!-- outer flame -->
+  <path d="M60,96 Q46,80 49,64 Q53,50 60,44 Q57,56 63,56 Q69,44 65,32 Q79,48 77,68 Q75,80 68,90 Q73,76 69,68 Q67,78 60,96Z" fill="#D85A30" opacity="0.9"/>
+  <!-- inner flame highlight -->
+  <path d="M60,90 Q51,78 53,68 Q56,60 60,56 Q58,64 62,64 Q66,56 64,48 Q73,60 71,72 Q69,82 60,90Z" fill="#F0997B" opacity="0.6"/>
+  <!-- divider -->
+  <line x1="16" y1="108" x2="104" y2="108" stroke="#993C1D" stroke-width="0.5" opacity="0.5"/>
+  <!-- tier name -->
+  <text font-family="monospace" font-size="11" font-weight="bold" x="60" y="126" text-anchor="middle" fill="#F5C4B3">veteran</text>
+  <!-- score range -->
+  <text font-family="monospace" font-size="10" x="60" y="144" text-anchor="middle" fill="#F0997B">76–90 pts</text>
+</svg>
