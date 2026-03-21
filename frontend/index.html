@@ -431,6 +431,19 @@
       border-radius: 4px;
     }
 
+    /* ── Tier badge image ───────────────────────────────────────── */
+    .tier-badge-img-wrap {
+      display: flex;
+      justify-content: center;
+      margin: 24px 0 8px;
+    }
+    .tier-badge-img {
+      width: 120px;
+      height: 160px;
+      border-radius: 12px;
+      filter: drop-shadow(0 4px 24px rgba(127,119,221,0.35));
+    }
+
     /* ── Action row ─────────────────────────────────────────────── */
     .action-row {
       display: flex;
@@ -679,14 +692,19 @@
           </div>
         </div>
 
+        <!-- Tier badge image -->
+        <div class="tier-badge-img-wrap" id="tierBadgeWrap" style="display:none;">
+          <img id="tierBadgeImg" src="" alt="Tier badge" class="tier-badge-img" />
+        </div>
+
         <!-- Score bar -->
         <div class="score-bar-wrap">
           <div class="score-bar-labels">
             <span>Newbie</span>
-            <span>Intern</span>
-            <span>Activus</span>
-            <span>Vet</span>
-            <span>Degen</span>
+            <span>Explorer</span>
+            <span>Degen-in-Training</span>
+            <span>Veteran</span>
+            <span>DEGEN</span>
           </div>
           <div class="score-bar-track">
             <div class="score-bar-fill" id="scoreBar" style="width:0%"></div>
@@ -775,10 +793,10 @@ const CATEGORIES = [
 
 const TIER_LABELS = {
   1: "Tier 1 — Newbie",
-  2: "Tier 2 — Intern",
-  3: "Tier 3 — Activus",
-  4: "Tier 4 — Vet",
-  5: "Tier 5 — Degen",
+  2: "Tier 2 — Explorer",
+  3: "Tier 3 — Degen-in-Training",
+  4: "Tier 4 — Veteran",
+  5: "Tier 5 — DEGEN",
 };
 
 // ── Loading chain messages ─────────────────────────────────────────
@@ -902,6 +920,22 @@ function renderScore(data) {
   // Tier info
   document.getElementById("tierName").textContent = tierName;
   document.getElementById("tierNum").textContent  = TIER_LABELS[tier] || "";
+
+  // Tier badge image
+  const BADGE_FILES = {
+    1: "badge-tier1-newbie.svg",
+    2: "badge-tier2-explorer.svg",
+    3: "badge-tier3-degen-in-training.svg",
+    4: "badge-tier4-veteran.svg",
+    5: "badge-tier5-degen.svg",
+  };
+  const badgeWrap = document.getElementById("tierBadgeWrap");
+  const badgeImg  = document.getElementById("tierBadgeImg");
+  if (BADGE_FILES[tier]) {
+    badgeImg.src = "/" + BADGE_FILES[tier];
+    badgeImg.alt = tierName + " badge";
+    badgeWrap.style.display = "flex";
+  }
 
   // Breakdown grid
   const grid = document.getElementById("breakdownGrid");
