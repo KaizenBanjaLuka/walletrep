@@ -20,11 +20,11 @@
       --accent-dark:   #26215C;
       --accent-light:  #AFA9EC;
       --accent-fill:   #1A1535;
-      --tier1:         #5a5a72;
-      --tier2:         #6a8fff;
-      --tier3:         #f0c050;
-      --tier4:         #ff6a3d;
-      --tier5:         #7F77DD;
+      --tier1:         #5DCAA5;
+      --tier2:         #85B7EB;
+      --tier3:         #EF9F27;
+      --tier4:         #F0997B;
+      --tier5:         #AFA9EC;
       --font-head:     'Syne', sans-serif;
       --font-mono:     'DM Mono', monospace;
     }
@@ -307,7 +307,7 @@
       font-size: 96px;
       font-weight: 800;
       line-height: 1;
-      color: var(--tier-color, var(--accent));
+      color: #EEEDFE;
       letter-spacing: -4px;
     }
     .score-max { font-size: 24px; color: var(--muted); letter-spacing: 0; }
@@ -346,7 +346,7 @@
     }
     .score-bar-fill {
       height: 100%;
-      background: var(--tier-color, var(--accent));
+      background: #534AB7;
       transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
       position: relative;
     }
@@ -355,7 +355,7 @@
       position: absolute;
       right: 0; top: -4px;
       width: 2px; height: 12px;
-      background: var(--tier-color, var(--accent));
+      background: #534AB7;
     }
 
     /* ── Tier markers ───────────────────────────────────────────── */
@@ -923,11 +923,11 @@ function renderScore(data) {
 
   // Tier badge image
   const BADGE_FILES = {
-    1: "badge-tier1-newbie.svg",
-    2: "badge-tier2-explorer.svg",
-    3: "badge-tier3-degen-in-training.svg",
-    4: "badge-tier4-veteran.svg",
-    5: "badge-tier5-degen.svg",
+    1: "assets/badges/badge-tier1-newbie.svg",
+    2: "assets/badges/badge-tier2-explorer.svg",
+    3: "assets/badges/badge-tier3-degen-in-training.svg",
+    4: "assets/badges/badge-tier4-veteran.svg",
+    5: "assets/badges/badge-tier5-degen.svg",
   };
   const badgeWrap = document.getElementById("tierBadgeWrap");
   const badgeImg  = document.getElementById("tierBadgeImg");
