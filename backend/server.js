@@ -14,21 +14,10 @@
 
 const express = require("express");
 const cors    = require("cors");
-const path    = require("path");
-const fs      = require("fs");
 require("dotenv").config();
 
 const { computeScore } = require("./scorer");
 const { fetchAllChains } = require("./chains");
-
-// ── Tier badge SVGs (loaded from frontend/, used by /badge/:wallet) ──────
-const BADGE_SVGS = {
-  1: fs.readFileSync(path.join(__dirname, "../frontend/badge-tier1-newbie.svg"),            "utf8"),
-  2: fs.readFileSync(path.join(__dirname, "../frontend/badge-tier2-explorer.svg"),          "utf8"),
-  3: fs.readFileSync(path.join(__dirname, "../frontend/badge-tier3-degen-in-training.svg"), "utf8"),
-  4: fs.readFileSync(path.join(__dirname, "../frontend/badge-tier4-veteran.svg"),           "utf8"),
-  5: fs.readFileSync(path.join(__dirname, "../frontend/badge-tier5-degen.svg"),             "utf8"),
-};
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -337,12 +326,70 @@ function renderScorePage(data) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// renderBadge — tier badge SVG with actual score injected
+// renderBadge — inline tier badge SVG with actual score
 // Usage: <img src="https://your-url.com/badge/0x...">
 // ─────────────────────────────────────────────────────────────────────────────
 function renderBadge(data) {
-  const { score, tier } = data;
-  const svg = BADGE_SVGS[tier] || BADGE_SVGS[1];
-  // Replace the static score-range text (y="144") with the wallet's actual score
-  return svg.replace(/(<text[^>]+y="144"[^>]*>)[^<]*(<\/text>)/, `$1${score} / 100$2`);
+  const { score, tier, tierName } = data;
+  const s = score; // shorthand for template use
+
+  const badges = {
+    1: `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="160" viewBox="0 0 120 160">
+  <rect width="120" height="160" rx="14" fill="#04342C" stroke="#5DCAA5" stroke-width="0.8"/>
+  <circle cx="60" cy="62" r="30" fill="none" stroke="#1D9E75" stroke-width="0.8" stroke-dasharray="4 3"/>
+  <ellipse cx="60" cy="62" rx="14" ry="18" fill="#1D9E75" opacity="0.5"/>
+  <line x1="60" y1="76" x2="60" y2="88" stroke="#5DCAA5" stroke-width="2" stroke-linecap="round"/>
+  <line x1="60" y1="82" x2="52" y2="76" stroke="#5DCAA5" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="16" y1="108" x2="104" y2="108" stroke="#1D9E75" stroke-width="0.5" opacity="0.5"/>
+  <text font-family="monospace" font-size="11" font-weight="bold" x="60" y="126" text-anchor="middle" fill="#9FE1CB">newbie</text>
+  <text font-family="monospace" font-size="10" x="60" y="144" text-anchor="middle" fill="#5DCAA5">${s} / 100</text>
+</svg>`,
+
+    2: `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="160" viewBox="0 0 120 160">
+  <rect width="120" height="160" rx="14" fill="#042C53" stroke="#85B7EB" stroke-width="0.8"/>
+  <circle cx="60" cy="64" r="32" fill="none" stroke="#185FA5" stroke-width="0.8" stroke-dasharray="6 3"/>
+  <ellipse cx="60" cy="60" rx="26" ry="15" fill="#185FA5" opacity="0.4"/>
+  <ellipse cx="60" cy="60" rx="26" ry="15" fill="none" stroke="#85B7EB" stroke-width="1"/>
+  <circle cx="60" cy="60" r="9" fill="#378ADD" opacity="0.8"/>
+  <circle cx="60" cy="60" r="4" fill="#B5D4F4"/>
+  <line x1="16" y1="108" x2="104" y2="108" stroke="#185FA5" stroke-width="0.5" opacity="0.5"/>
+  <text font-family="monospace" font-size="11" font-weight="bold" x="60" y="126" text-anchor="middle" fill="#B5D4F4">explorer</text>
+  <text font-family="monospace" font-size="10" x="60" y="144" text-anchor="middle" fill="#85B7EB">${s} / 100</text>
+</svg>`,
+
+    3: `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="160" viewBox="0 0 120 160">
+  <rect width="120" height="160" rx="14" fill="#412402" stroke="#EF9F27" stroke-width="0.8"/>
+  <circle cx="60" cy="62" r="30" fill="none" stroke="#BA7517" stroke-width="0.8" stroke-dasharray="5 3" opacity="0.8"/>
+  <polygon points="62,34 50,66 59,66 51,98 71,62 61,62" fill="#EF9F27" opacity="0.9"/>
+  <line x1="16" y1="108" x2="104" y2="108" stroke="#BA7517" stroke-width="0.5" opacity="0.5"/>
+  <text font-family="monospace" font-size="9" font-weight="bold" x="60" y="126" text-anchor="middle" fill="#FAC775">degen-in-training</text>
+  <text font-family="monospace" font-size="10" x="60" y="144" text-anchor="middle" fill="#EF9F27">${s} / 100</text>
+</svg>`,
+
+    4: `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="160" viewBox="0 0 120 160">
+  <rect width="120" height="160" rx="14" fill="#4A1B0C" stroke="#F0997B" stroke-width="0.8"/>
+  <circle cx="60" cy="64" r="34" fill="none" stroke="#993C1D" stroke-width="0.8" stroke-dasharray="6 3"/>
+  <path d="M60,96 Q46,80 49,64 Q53,50 60,44 Q57,56 63,56 Q69,44 65,32 Q79,48 77,68 Q75,80 68,90 Q73,76 69,68 Q67,78 60,96Z" fill="#D85A30" opacity="0.9"/>
+  <path d="M60,90 Q51,78 53,68 Q56,60 60,56 Q58,64 62,64 Q66,56 64,48 Q73,60 71,72 Q69,82 60,90Z" fill="#F0997B" opacity="0.6"/>
+  <line x1="16" y1="108" x2="104" y2="108" stroke="#993C1D" stroke-width="0.5" opacity="0.5"/>
+  <text font-family="monospace" font-size="11" font-weight="bold" x="60" y="126" text-anchor="middle" fill="#F5C4B3">veteran</text>
+  <text font-family="monospace" font-size="10" x="60" y="144" text-anchor="middle" fill="#F0997B">${s} / 100</text>
+</svg>`,
+
+    5: `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="160" viewBox="0 0 120 160">
+  <rect width="120" height="160" rx="14" fill="#26215C" stroke="#AFA9EC" stroke-width="0.8"/>
+  <circle cx="60" cy="64" r="40" fill="none" stroke="#534AB7" stroke-width="0.5" stroke-dasharray="2 4" opacity="0.5"/>
+  <circle cx="60" cy="64" r="34" fill="none" stroke="#7F77DD" stroke-width="0.8" stroke-dasharray="3 2"/>
+  <polygon points="60,26 84,54 60,96 36,54" fill="#7F77DD" opacity="0.35"/>
+  <polygon points="60,26 84,54 60,96 36,54" fill="none" stroke="#AFA9EC" stroke-width="1"/>
+  <polygon points="60,38 76,54 60,82 44,54" fill="#AFA9EC" opacity="0.4"/>
+  <circle cx="52" cy="54" r="3" fill="#EEEDFE"/>
+  <circle cx="68" cy="54" r="3" fill="#EEEDFE"/>
+  <line x1="16" y1="108" x2="104" y2="108" stroke="#534AB7" stroke-width="0.5" opacity="0.5"/>
+  <text font-family="monospace" font-size="11" font-weight="bold" x="60" y="126" text-anchor="middle" fill="#CECBF6">degen</text>
+  <text font-family="monospace" font-size="10" x="60" y="144" text-anchor="middle" fill="#AFA9EC">${s} / 100</text>
+</svg>`,
+  };
+
+  return badges[tier] || badges[1];
 }
