@@ -119,6 +119,27 @@ app.post("/api/score", async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// GET /api/score/:wallet — JSON score for a wallet (no rate limit)
+// Used by the frontend share page at wlltrep.xyz/score/:wallet
+// Returns: { score, tier, tierName, breakdown, activeChainNames }
+// ─────────────────────────────────────────────────────────────────────────────
+app.get("/api/score/:wallet", async (req, res) => {
+  const { wallet } = req.params;
+
+  if (!isValidAddress(wallet)) {
+    return res.status(400).json({ error: "Invalid wallet address" });
+  }
+
+  try {
+    const result = await getScore(wallet);
+    return res.json(result);
+  } catch (err) {
+    console.error("Scoring error:", err);
+    return res.status(500).json({ error: "Failed to compute score" });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // GET /score/:wallet — server-rendered shareable score page
 // Anyone can open this link without connecting a wallet.
 // ─────────────────────────────────────────────────────────────────────────────

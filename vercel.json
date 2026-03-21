@@ -7,9 +7,7 @@
     }
   ],
   "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "frontend/$1"
-    }
+    { "src": "/score/(.*)", "dest": "/frontend/score.html" },
+    { "src": "/(.*)",       "dest": "/frontend/$1" }
   ]
 }

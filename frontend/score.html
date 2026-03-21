@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WalletRep Score</title>
+
+  <!-- OG / social meta — populated by JS after fetch -->
+  <meta property="og:site_name" content="WalletRep" />
+  <meta property="og:description" content="Onchain reputation score across 5 chains" />
+  <meta property="og:url" id="ogUrl" content="https://wlltrep.xyz" />
+  <meta property="og:title" id="ogTitle" content="WalletRep Score" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" id="twTitle" content="WalletRep Score" />
+  <meta name="twitter:description" content="Onchain reputation score across 5 chains" />
+
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:            #0E0C1A;
+      --surface:       #120F28;
+      --border:        #2A2550;
+      --text:          #EEEDFE;
+      --muted:         #888780;
+      --accent:        #7F77DD;
+      --accent-border: #534AB7;
+      --accent-light:  #AFA9EC;
+      --tier1:         #5DCAA5;
+      --tier2:         #85B7EB;
+      --tier3:         #EF9F27;
+      --tier4:         #F0997B;
+      --tier5:         #AFA9EC;
+      --font-head:     'Syne', sans-serif;
+      --font-mono:     'DM Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    /* ── Nav ────────────────────────────────────────────────────── */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 40px;
+      border-bottom: 0.5px solid var(--border);
+    }
+    .nav-logo {
+      font-family: var(--font-head);
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    .nav-logo span { color: var(--accent); }
+    .nav-sub {
+      font-size: 9px;
+      letter-spacing: 3px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .nav-home {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      border: 0.5px solid var(--border);
+      padding: 6px 16px;
+      border-radius: 4px;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .nav-home:hover { color: var(--text); border-color: var(--accent); }
+
+    /* ── Main ───────────────────────────────────────────────────── */
+    main {
+      flex: 1;
+      max-width: 720px;
+      width: 100%;
+      margin: 60px auto;
+      padding: 0 24px;
+    }
+
+    /* ── Wallet address label ────────────────────────────────────── */
+    .wallet-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .wallet-addr {
+      color: var(--accent-light);
+      word-break: break-all;
+    }
+
+    /* ── Score card ─────────────────────────────────────────────── */
+    .score-card {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: 14px;
+      padding: 48px;
+      position: relative;
+      overflow: hidden;
+    }
+    .score-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--tier-color, var(--accent)), transparent);
+    }
+
+    [data-tier="1"] { --tier-color: var(--tier1); }
+    [data-tier="2"] { --tier-color: var(--tier2); }
+    [data-tier="3"] { --tier-color: var(--tier3); }
+    [data-tier="4"] { --tier-color: var(--tier4); }
+    [data-tier="5"] { --tier-color: var(--tier5); }
+
+    .score-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 40px;
+    }
+    .score-number {
+      font-family: var(--font-head);
+      font-size: 96px;
+      font-weight: 800;
+      line-height: 1;
+      color: #EEEDFE;
+      letter-spacing: -4px;
+    }
+    .score-max { font-size: 24px; color: var(--muted); letter-spacing: 0; }
+
+    .tier-badge { text-align: right; }
+    .tier-name {
+      font-family: var(--font-head);
+      font-size: 28px;
+      font-weight: 800;
+      color: #7F77DD;
+      letter-spacing: -0.5px;
+    }
+    .tier-num {
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    /* ── Tier badge image ────────────────────────────────────────── */
+    .tier-badge-img-wrap {
+      display: flex;
+      justify-content: center;
+      margin: 24px 0 8px;
+    }
+    .tier-badge-img {
+      width: 120px;
+      height: 160px;
+      border-radius: 12px;
+      filter: drop-shadow(0 4px 24px rgba(127,119,221,0.35));
+    }
+
+    /* ── Breakdown grid ─────────────────────────────────────────── */
+    .breakdown-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 0.5px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 32px;
+    }
+    .breakdown-cell {
+      background: var(--surface);
+      padding: 20px;
+    }
+    .breakdown-label {
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .breakdown-score {
+      font-family: var(--font-head);
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .breakdown-max { font-size: 12px; color: var(--muted); }
+    .breakdown-bar {
+      height: 2px;
+      background: var(--border);
+      margin-top: 10px;
+    }
+    .breakdown-bar-fill {
+      height: 100%;
+      background: var(--accent);
+    }
+
+    /* ── Chain activity ─────────────────────────────────────────── */
+    .chain-activity { margin-top: 32px; }
+    .chain-activity-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .chain-list { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chain-pill {
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border: 0.5px solid var(--accent-border);
+      color: var(--accent);
+      border-radius: 4px;
+    }
+
+    /* ── Action row ─────────────────────────────────────────────── */
+    .action-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 32px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 10px 20px;
+      border: 0.5px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .btn:hover { color: var(--text); border-color: var(--accent); }
+    .btn-primary {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 10px 20px;
+      background: var(--accent);
+      color: #0E0C1A;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+
+    /* ── Loading / error states ─────────────────────────────────── */
+    .state-wrap {
+      text-align: center;
+      padding: 80px 24px;
+    }
+    .state-label {
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .state-detail {
+      font-size: 13px;
+      color: var(--muted);
+      word-break: break-all;
+    }
+
+    /* ── Footer ─────────────────────────────────────────────────── */
+    footer {
+      padding: 24px 40px;
+      border-top: 0.5px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+
+    /* ── Toast ──────────────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      color: var(--text);
+      font-size: 11px;
+      letter-spacing: 1px;
+      padding: 10px 20px;
+      border-radius: 6px;
+      opacity: 0;
+      transition: opacity 0.3s, transform 0.3s;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 600px) {
+      nav { padding: 16px 20px; }
+      main { margin: 32px auto; }
+      .score-card { padding: 28px 20px; }
+      .score-header { flex-direction: column; gap: 16px; }
+      .tier-badge { text-align: left; }
+      .score-number { font-size: 64px; }
+      .breakdown-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav>
+    <div>
+      <div class="nav-logo">WALLET<span>REP</span></div>
+      <div class="nav-sub">Onchain Reputation Protocol</div>
+    </div>
+    <a href="/" class="nav-home">← Home</a>
+  </nav>
+
+  <!-- Main -->
+  <main id="main">
+    <div class="state-wrap" id="loadingState">
+      <div class="state-label">Fetching score</div>
+      <div class="state-detail" id="loadingAddr"></div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div>WALLETREP © 2025 — $WREP</div>
+    <div>Zero data stored. Wallet IDs never saved.</div>
+  </footer>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+<script>
+const BACKEND = "https://walletrep-backend-production.up.railway.app";
+const SITE    = "https://wlltrep.xyz";
+
+const CATEGORIES = [
+  { key: "walletAge",    label: "Wallet Age",    max: 20 },
+  { key: "txVolume",     label: "TX Volume",     max: 15 },
+  { key: "txFrequency",  label: "TX Frequency",  max: 15 },
+  { key: "defiActivity", label: "DeFi Activity", max: 25 },
+  { key: "nftActivity",  label: "NFT Activity",  max: 10 },
+  { key: "multichain",   label: "Multi-chain",   max: 15 },
+];
+
+const TIER_LABELS = {
+  1: "Tier 1 — Newbie",
+  2: "Tier 2 — Explorer",
+  3: "Tier 3 — Degen-in-Training",
+  4: "Tier 4 — Veteran",
+  5: "Tier 5 — DEGEN",
+};
+
+const BADGE_FILES = {
+  1: "/assets/badges/badge-tier1-newbie.svg",
+  2: "/assets/badges/badge-tier2-explorer.svg",
+  3: "/assets/badges/badge-tier3-degen-in-training.svg",
+  4: "/assets/badges/badge-tier4-veteran.svg",
+  5: "/assets/badges/badge-tier5-degen.svg",
+};
+
+// ── Extract wallet from path /score/0x... ────────────────────────
+function walletFromPath() {
+  const m = window.location.pathname.match(/\/score\/(0x[0-9a-fA-F]{40})/i);
+  return m ? m[1] : null;
+}
+
+// ── Update OG meta tags ──────────────────────────────────────────
+function setMeta(score, tierName, wallet) {
+  const title = `WalletRep Score — ${tierName} (${score}/100)`;
+  const url   = `${SITE}/score/${wallet}`;
+  document.title = title;
+  document.getElementById("ogTitle").setAttribute("content", title);
+  document.getElementById("twTitle").setAttribute("content", title);
+  document.getElementById("ogUrl").setAttribute("content", url);
+}
+
+// ── Render score card ────────────────────────────────────────────
+function renderCard(data, wallet) {
+  const { score, tier, tierName, breakdown, activeChainNames } = data;
+
+  setMeta(score, tierName, wallet);
+
+  const breakdownCells = CATEGORIES.map(cat => {
+    const pts = breakdown[cat.key] || 0;
+    const pct = Math.round((pts / cat.max) * 100);
+    return `
+      <div class="breakdown-cell">
+        <div class="breakdown-label">${cat.label}</div>
+        <div class="breakdown-score">${pts}<span class="breakdown-max">/${cat.max}</span></div>
+        <div class="breakdown-bar">
+          <div class="breakdown-bar-fill" style="width:${pct}%"></div>
+        </div>
+      </div>`;
+  }).join("");
+
+  const chainHtml = (activeChainNames && activeChainNames.length > 0)
+    ? `<div class="chain-activity">
+         <div class="chain-activity-label">Active on</div>
+         <div class="chain-list">
+           ${activeChainNames.map(c => `<span class="chain-pill">${c}</span>`).join("")}
+         </div>
+       </div>`
+    : "";
+
+  const short = wallet.slice(0, 6) + "..." + wallet.slice(-4);
+
+  document.getElementById("main").innerHTML = `
+    <div class="wallet-label">Score for <span class="wallet-addr">${wallet}</span></div>
+    <div class="score-card" data-tier="${tier}">
+      <div class="score-header">
+        <div>
+          <div class="score-number">${score}<span class="score-max">/100</span></div>
+        </div>
+        <div class="tier-badge">
+          <div class="tier-name">${tierName}</div>
+          <div class="tier-num">${TIER_LABELS[tier] || ""}</div>
+        </div>
+      </div>
+
+      <div class="tier-badge-img-wrap">
+        <img src="${BADGE_FILES[tier]}" alt="${tierName} badge" class="tier-badge-img" />
+      </div>
+
+      <div class="breakdown-grid">${breakdownCells}</div>
+
+      ${chainHtml}
+
+      <div class="action-row">
+        <button class="btn-primary" onclick="copyLink('${wallet}')">Copy Link</button>
+        <a href="/" class="btn" style="display:inline-flex;align-items:center;">Score My Wallet</a>
+      </div>
+    </div>
+  `;
+}
+
+// ── Show error state ─────────────────────────────────────────────
+function showError(msg) {
+  document.getElementById("main").innerHTML = `
+    <div class="state-wrap">
+      <div class="state-label">Score unavailable</div>
+      <div class="state-detail">${msg}</div>
+    </div>`;
+}
+
+// ── Copy shareable link ──────────────────────────────────────────
+function copyLink(wallet) {
+  const url = `${SITE}/score/${wallet}`;
+  navigator.clipboard.writeText(url).then(() => showToast("Link copied!"));
+}
+
+// ── Toast ────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+// ── Boot ─────────────────────────────────────────────────────────
+(async function init() {
+  const wallet = walletFromPath();
+  if (!wallet) {
+    showError("No wallet address found in URL.");
+    return;
+  }
+  document.getElementById("loadingAddr").textContent = wallet;
+
+  try {
+    const res  = await fetch(`${BACKEND}/api/score/${wallet}`);
+    if (!res.ok) throw new Error(`Backend returned ${res.status}`);
+    const data = await res.json();
+    renderCard(data, wallet);
+  } catch (err) {
+    showError(err.message || "Failed to fetch score. Try again later.");
+  }
+})();
+</script>
+</body>
+</html>

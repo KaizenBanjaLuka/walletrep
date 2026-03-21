@@ -964,13 +964,14 @@ function renderScore(data) {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// SHARE SCORE — opens the live shareable score page in a new tab
+// SHARE SCORE — copies wlltrep.xyz/score/:wallet to clipboard
 // ─────────────────────────────────────────────────────────────────────
 function shareScore() {
   if (!state.wallet) return;
-  const url = `${CONFIG.backendUrl}/score/${state.wallet}`;
-  window.open(url, "_blank");
-  showToast("Score page opened!", "success");
+  const url = `https://wlltrep.xyz/score/${state.wallet}`;
+  navigator.clipboard.writeText(url).then(() => {
+    showToast("Link copied!", "success");
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────
