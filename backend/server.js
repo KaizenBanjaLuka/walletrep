@@ -2,8 +2,6 @@
 // server.js — WalletRep Scoring Backend
 //
 // Endpoints:
-//   GET  /                   — serves index.html (main app)
-//   GET  /widget.html        — serves widget.html (embeddable version)
 //   POST /api/score          — compute score, return JSON (used by frontend)
 //   GET  /score/:wallet      — shareable HTML page for a wallet's score
 //   GET  /badge/:wallet      — embeddable SVG badge  (<img src="...">)
@@ -23,9 +21,7 @@ require("dotenv").config();
 const { computeScore } = require("./scorer");
 const { fetchAllChains } = require("./chains");
 
-// ── Favicon + tier badge SVGs (loaded from frontend/) ────────────────────
-const FAVICON_SVG = fs.readFileSync(path.join(__dirname, "../frontend/favicon.svg"));
-
+// ── Tier badge SVGs (loaded from frontend/, used by /badge/:wallet) ──────
 const BADGE_SVGS = {
   1: fs.readFileSync(path.join(__dirname, "../frontend/badge-tier1-newbie.svg"),            "utf8"),
   2: fs.readFileSync(path.join(__dirname, "../frontend/badge-tier2-explorer.svg"),          "utf8"),
@@ -39,15 +35,6 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
-
-// ── Serve frontend files ──────────────────────────────────────────────────
-app.get("/",            (_, res) => res.sendFile(path.join(__dirname, "index.html")));
-app.get("/widget.html", (_, res) => res.sendFile(path.join(__dirname, "widget.html")));
-app.get("/favicon.ico", (_, res) => {
-  res.setHeader("Content-Type", "image/svg+xml");
-  res.setHeader("Cache-Control", "public, max-age=86400");
-  res.send(FAVICON_SVG);
-});
 
 // ── In-memory score cache ─────────────────────────────────────────────────
 // Avoids re-fetching for shareable links and repeated requests.
