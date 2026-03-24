@@ -741,6 +741,11 @@
 
   </main>
 
+  <!-- ── Resume cross-link ────────────────────────────────────── -->
+  <div id="resumeLink" style="display:none; text-align:center; padding:0 0 32px; font-family:'Space Mono',monospace; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:#6b6b8a;">
+    <a id="resumeAnchor" href="#" target="_blank" rel="noopener noreferrer" style="color:#7b6ff0; text-decoration:none;">View Full Onchain Resume →</a>
+  </div>
+
   <!-- ── Footer ──────────────────────────────────────────────── -->
   <footer>
     <div class="footer-note">WALLETREP © 2025 — $WREP</div>
@@ -961,6 +966,11 @@ function renderScore(data) {
         `<span class="chain-pill">${c}</span>`
       ).join("");
   }
+
+  // Resume cross-link
+  const resumeAnchor = document.getElementById("resumeAnchor");
+  resumeAnchor.href = `https://wlltresume.xyz/${state.wallet}`;
+  document.getElementById("resumeLink").style.display = "block";
 }
 
 // ─────────────────────────────────────────────────────────────────────
