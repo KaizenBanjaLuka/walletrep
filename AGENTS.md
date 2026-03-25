@@ -186,3 +186,8 @@ Product suite integration: always ask how a feature connects all three layers
 Security review before any new API integration or wallet interaction
 Never delete .gitignore and if you do recover it and notify Bojan
 Check for session_log.md for more context 
+
+11.CHANGELOG
+
+When a feature is moved to Done, update CHANGELOG.md under [Unreleased]. When a meaningful set of changes is deployed, bump the version number using semantic versioning: MAJOR.MINOR.PATCH — new feature = bump MINOR, bug fix = bump PATCH, breaking change = bump MAJOR.
+
