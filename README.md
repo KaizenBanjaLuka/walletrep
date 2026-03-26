@@ -6,7 +6,8 @@ wlltrep.xyz
 
 WalletRep analyzes a wallet's entire onchain history across 5 EVM chains and assigns a 1–100 reputation score, divided into 5 named tiers. Scores can optionally be minted as a Soulbound Token (SBT) on Base. **No wallet addresses or activity data are ever stored.**
 
-<img width="1860" height="1328" alt="image" src="https://github.com/user-attachments/assets/cb4ea2cf-823e-4b66-81d8-fa531010fd7c" />
+<img width="1708" height="1382" alt="image" src="https://github.com/user-attachments/assets/107da246-dc79-4b9d-aef3-4afd483c0e09" />
+
 
 ---
 
